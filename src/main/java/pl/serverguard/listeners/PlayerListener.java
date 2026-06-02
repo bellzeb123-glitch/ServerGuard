@@ -38,14 +38,11 @@ public class PlayerListener implements Listener {
         ));
     }
 
-    // Loguj teleporty komendami - mamy pozycję "skąd" i "dokąd"
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTeleport(PlayerTeleportEvent event) {
         if (event.getTo() == null) return;
         var cause = event.getCause();
-        // Loguj tylko teleporty z komend i pluginów, nie normalne poruszanie
-        if (cause == PlayerTeleportEvent.TeleportCause.WALK || 
-            cause == PlayerTeleportEvent.TeleportCause.UNKNOWN) return;
+        if (cause == PlayerTeleportEvent.TeleportCause.UNKNOWN) return;
 
         var p = event.getPlayer();
         plugin.getDb().log(LogEntry.command(
