@@ -1,0 +1,90 @@
+# ServerGuard v2 - Konfiguracja
+# Zoptymalizowana pod 50+ graczy
+
+# Jak często opróżniać bufor i zapisywać do bazy (sekundy)
+# Mniejsza wartość = szybsze logi, większe obciążenie. Zalecane: 3-10
+flush-interval: 5
+
+# Maksymalny rozmiar bufora (zdarzenia). Przy przekroczeniu - natychmiastowy flush.
+# Zabezpieczenie przed zapełnieniem RAM przy spike'ach aktywności.
+max-buffer-size: 500
+
+# Monitorowanie komend
+commands:
+  log-all: true
+  alert-list:
+    - "/op"
+    - "/deop"
+    - "/ban"
+    - "/pardon"
+    - "/stop"
+    - "/restart"
+    - "/gamemode"
+    - "/gm"
+    - "/give"
+    - "/summon"
+    - "/setblock"
+    - "/fill"
+    - "/execute"
+    - "//set"
+    - "//fill"
+    - "//replace"
+    - "//copy"
+    - "//paste"
+  blocked-list:
+    - "/op"
+    - "/deop"
+    - "/stop"
+    - "/restart"
+
+# Monitorowanie skrzyń
+containers:
+  enabled: true
+  # Loguj tylko faktyczne zmiany zawartości (wyjął/włożył)
+  # false = loguj też samo otwarcie skrzyni
+  changes-only: true
+  monitored-types:
+    - CHEST
+    - TRAPPED_CHEST
+    - BARREL
+    - ENDER_CHEST
+    - SHULKER_BOX
+    - HOPPER
+    - DROPPER
+    - DISPENSER
+
+# Monitorowanie bloków
+blocks:
+  log-break: true
+  log-place: true
+  # UWAGA: log-all-blocks: true przy 50 graczach kopiących = ogromna baza
+  log-all-blocks: false
+  always-log:
+    - CHEST
+    - TRAPPED_CHEST
+    - BARREL
+    - ENDER_CHEST
+    - SHULKER_BOX
+    - SPAWNER
+    - BEACON
+    - CONDUIT
+    - ENCHANTING_TABLE
+    - ANVIL
+    - JUKEBOX
+
+# Alerty dla adminów
+alerts:
+  enabled: true
+  prefix: "&c[&4SG&c] &e"
+  sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+
+# Baza danych
+database:
+  type: sqlite
+  sqlite-file: "serverguard.db"
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "serverguard"
+    username: "root"
+    password: "haslo"

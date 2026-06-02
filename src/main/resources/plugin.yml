@@ -1,0 +1,28 @@
+name: ServerGuard
+version: 2.0.0
+main: pl.serverguard.ServerGuard
+api-version: '1.21'
+description: "Lekki monitoring serwera - komendy, skrzynie, bloki."
+authors: [ServerGuard]
+
+commands:
+  sg:
+    description: Glowna komenda ServerGuard
+    usage: /sg <podkomenda>
+    permission: serverguard.admin
+  sghistory:
+    description: Historia gracza
+    usage: /sghistory <nick> [komendy|skrzynie|bloki] [ilosc]
+    permission: serverguard.admin
+  sgsearch:
+    description: Szukaj w logach
+    usage: /sgsearch <fraza>
+    permission: serverguard.admin
+
+permissions:
+  serverguard.admin:
+    description: Dostep do komend ServerGuard
+    default: op
+  serverguard.bypass:
+    description: Pomija alerty i blokady
+    default: false
