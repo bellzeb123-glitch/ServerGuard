@@ -9,33 +9,16 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-/**
- * Zapis wsadowy (batch insert) do SQLite/MySQL.
- *
- * Architektura:
- *  - Wątki serwera (main thread + async events) wrzucają LogEntry do
- *    lock-free kolejki (ArrayBlockingQueue).
- *  - Jeden dedykowany wątek tła co FLUSH_INTERVAL_MS opróżnia kolejkę
- *    i zapisuje wszystko w jednej transakcji.
- *
- * Dzięki temu:
- *  - Zero blokowania wątku głównego (offeruje do kolejki - operacja O(1))
- *  - Wszystkie zapisy w jednej transakcji = kilkaset razy szybciej niż
- *    osobne INSERT per zdarzenie
- *  - Brak connection pool - jedno połączenie dedykowane wątkowi zapisu
- */
 public class DatabaseManager {
 
     private final ServerGuard plugin;
     private Connection connection;
     private final String dbType;
 
-    // Kolejka zdarzeń (lock-free, bounded)
     private final BlockingQueue<LogEntry> queue;
     private volatile boolean running = true;
     private Thread writerThread;
 
-    // Przygotowane zapytania (reużywane)
     private PreparedStatement psCommand;
     private PreparedStatement psContainer;
     private PreparedStatement psBlock;
@@ -45,23 +28,21 @@ public class DatabaseManager {
         this.plugin = plugin;
         this.dbType = plugin.getConfig().getString("database.type", "sqlite").toLowerCase();
         int maxBuffer = plugin.getConfig().getInt("max-buffer-size", 500);
-        this.queue = new ArrayBlockingQueue<>(maxBuffer * 2); // 2x margines
+        this.queue = new ArrayBlockingQueue<>(maxBuffer * 2);
     }
 
     public void initialize() {
         try {
             connect();
-            applyPragmas();
             createTables();
             prepareStatements();
             startWriterThread();
             plugin.getLogger().info("Baza danych gotowa (" + dbType + "). Bufor aktywny.");
         } catch (SQLException e) {
-            plugin.getLogger().severe("Błąd inicjalizacji bazy danych: " + e.getMessage());
+            plugin.getLogger().severe("Blad inicjalizacji bazy danych: " + e.getMessage());
+            e.printStackTrace();
         }
     }
-
-    // ── Połączenie ───────────────────────────────────────────────────────────
 
     private void connect() throws SQLException {
         if (dbType.equals("mysql")) {
@@ -72,95 +53,89 @@ public class DatabaseManager {
             String pass = plugin.getConfig().getString("database.mysql.password", "");
             String url  = "jdbc:mysql://" + host + ":" + port + "/" + db
                     + "?useSSL=false&autoReconnect=true&characterEncoding=UTF-8"
-                    + "&rewriteBatchedStatements=true";  // kluczowe dla MySQL batch
+                    + "&rewriteBatchedStatements=true";
             connection = DriverManager.getConnection(url, user, pass);
         } else {
             String fileName = plugin.getConfig().getString("database.sqlite-file", "serverguard.db");
             File dbFile = new File(plugin.getDataFolder(), fileName);
             plugin.getDataFolder().mkdirs();
+            // SQLite - autoCommit zostaje TRUE podczas tworzenia tabel
             connection = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+            // Optymalizacje SQLite
+            try (Statement s = connection.createStatement()) {
+                s.execute("PRAGMA journal_mode=WAL");
+                s.execute("PRAGMA synchronous=NORMAL");
+                s.execute("PRAGMA cache_size=-32000");
+                s.execute("PRAGMA temp_store=MEMORY");
+                s.execute("PRAGMA mmap_size=268435456");
+                s.execute("PRAGMA wal_autocheckpoint=1000");
+            }
         }
-        connection.setAutoCommit(false); // ręczna kontrola transakcji
+        // autoCommit=true na etapie tworzenia tabel - wlaczymy false dopiero przed zapisem
     }
-
-    private void applyPragmas() throws SQLException {
-        if (!dbType.equals("sqlite")) return;
-        try (Statement s = connection.createStatement()) {
-            s.execute("PRAGMA journal_mode=WAL");       // zapis bez blokowania odczytu
-            s.execute("PRAGMA synchronous=NORMAL");     // bezpieczne, szybsze niż FULL
-            s.execute("PRAGMA cache_size=-32000");      // 32MB cache w pamięci
-            s.execute("PRAGMA temp_store=MEMORY");      // tabele temp w RAM
-            s.execute("PRAGMA mmap_size=268435456");    // 256MB memory-mapped I/O
-            s.execute("PRAGMA wal_autocheckpoint=1000");
-            connection.commit();
-        }
-    }
-
-    // ── Schemat bazy ─────────────────────────────────────────────────────────
 
     private void createTables() throws SQLException {
-        String ai = dbType.equals("mysql") ? "AUTO_INCREMENT" : "AUTOINCREMENT";
+        // SQLite: nie uzywamy AUTOINCREMENT (zbedne i wolniejsze), INTEGER PRIMARY KEY wystarczy
+        // MySQL: AUTO_INCREMENT
+        String ai = dbType.equals("mysql") ? " AUTO_INCREMENT" : "";
+
         try (Statement s = connection.createStatement()) {
-            s.execute("""
-                CREATE TABLE IF NOT EXISTS sg_commands (
-                    id INTEGER PRIMARY KEY %s,
-                    ts   DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    uuid TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    world TEXT NOT NULL,
-                    x REAL, y REAL, z REAL,
-                    cmd  TEXT NOT NULL,
-                    alert INTEGER DEFAULT 0
-                )""".formatted(ai));
+            s.execute("CREATE TABLE IF NOT EXISTS sg_commands (" +
+                "id INTEGER PRIMARY KEY" + ai + "," +
+                "ts DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                "uuid TEXT NOT NULL," +
+                "name TEXT NOT NULL," +
+                "world TEXT NOT NULL," +
+                "x REAL, y REAL, z REAL," +
+                "cmd TEXT NOT NULL," +
+                "alert INTEGER DEFAULT 0" +
+                ")");
 
-            s.execute("""
-                CREATE TABLE IF NOT EXISTS sg_containers (
-                    id INTEGER PRIMARY KEY %s,
-                    ts   DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    uuid TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    action TEXT NOT NULL,
-                    world TEXT NOT NULL,
-                    x INTEGER, y INTEGER, z INTEGER,
-                    ctype TEXT NOT NULL,
-                    item  TEXT,
-                    amount INTEGER DEFAULT 0
-                )""".formatted(ai));
+            s.execute("CREATE TABLE IF NOT EXISTS sg_containers (" +
+                "id INTEGER PRIMARY KEY" + ai + "," +
+                "ts DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                "uuid TEXT NOT NULL," +
+                "name TEXT NOT NULL," +
+                "action TEXT NOT NULL," +
+                "world TEXT NOT NULL," +
+                "x INTEGER, y INTEGER, z INTEGER," +
+                "ctype TEXT NOT NULL," +
+                "item TEXT," +
+                "amount INTEGER DEFAULT 0" +
+                ")");
 
-            s.execute("""
-                CREATE TABLE IF NOT EXISTS sg_blocks (
-                    id INTEGER PRIMARY KEY %s,
-                    ts   DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    uuid TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    action TEXT NOT NULL,
-                    world TEXT NOT NULL,
-                    x INTEGER, y INTEGER, z INTEGER,
-                    btype TEXT NOT NULL
-                )""".formatted(ai));
+            s.execute("CREATE TABLE IF NOT EXISTS sg_blocks (" +
+                "id INTEGER PRIMARY KEY" + ai + "," +
+                "ts DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                "uuid TEXT NOT NULL," +
+                "name TEXT NOT NULL," +
+                "action TEXT NOT NULL," +
+                "world TEXT NOT NULL," +
+                "x INTEGER, y INTEGER, z INTEGER," +
+                "btype TEXT NOT NULL" +
+                ")");
 
-            s.execute("""
-                CREATE TABLE IF NOT EXISTS sg_sessions (
-                    id INTEGER PRIMARY KEY %s,
-                    ts   DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    uuid TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    action TEXT NOT NULL,
-                    ip   TEXT,
-                    world TEXT,
-                    x REAL, y REAL, z REAL
-                )""".formatted(ai));
+            s.execute("CREATE TABLE IF NOT EXISTS sg_sessions (" +
+                "id INTEGER PRIMARY KEY" + ai + "," +
+                "ts DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                "uuid TEXT NOT NULL," +
+                "name TEXT NOT NULL," +
+                "action TEXT NOT NULL," +
+                "ip TEXT," +
+                "world TEXT," +
+                "x REAL, y REAL, z REAL" +
+                ")");
 
-            // Indeksy - tylko te faktycznie używane w zapytaniach
             s.execute("CREATE INDEX IF NOT EXISTS idx_cmd_name  ON sg_commands(name, ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_cmd_alert ON sg_commands(alert, ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_con_name  ON sg_containers(name, ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_con_pos   ON sg_containers(world, x, y, z)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_blk_name  ON sg_blocks(name, ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_blk_pos   ON sg_blocks(world, x, y, z)");
-
-            connection.commit();
         }
+        plugin.getLogger().info("Tabele bazy danych gotowe.");
+        // Dopiero teraz wlaczamy tryb manualnych transakcji dla szybkiego zapisu
+        connection.setAutoCommit(false);
     }
 
     private void prepareStatements() throws SQLException {
@@ -173,8 +148,6 @@ public class DatabaseManager {
         psSession = connection.prepareStatement(
             "INSERT INTO sg_sessions (uuid,name,action,ip,world,x,y,z) VALUES (?,?,?,?,?,?,?,?)");
     }
-
-    // ── Wątek zapisu ─────────────────────────────────────────────────────────
 
     private void startWriterThread() {
         long intervalMs = plugin.getConfig().getLong("flush-interval", 5) * 1000L;
@@ -197,11 +170,10 @@ public class DatabaseManager {
         }, "ServerGuard-Writer");
 
         writerThread.setDaemon(true);
-        writerThread.setPriority(Thread.MIN_PRIORITY); // najniższy priorytet
+        writerThread.setPriority(Thread.MIN_PRIORITY);
         writerThread.start();
     }
 
-    /** Zapisuje cały batch w jednej transakcji. */
     private void flush(List<LogEntry> batch) {
         try {
             for (LogEntry e : batch) {
@@ -261,57 +233,47 @@ public class DatabaseManager {
             psSession.executeBatch();
             connection.commit();
         } catch (SQLException e) {
-            plugin.getLogger().warning("Błąd zapisu batch (" + batch.size() + " wpisów): " + e.getMessage());
+            plugin.getLogger().warning("Blad zapisu batch (" + batch.size() + " wpisow): " + e.getMessage());
             try { connection.rollback(); } catch (SQLException ignored) {}
         }
     }
 
-    // ── Publiczne API (wołane z listenerów) ──────────────────────────────────
-
     public void log(LogEntry entry) {
         int maxBuffer = plugin.getConfig().getInt("max-buffer-size", 500);
         if (!queue.offer(entry)) {
-            // Kolejka pełna - natychmiastowy flush na wątku tła
-            plugin.getLogger().warning("Bufor pełny! Natychmiastowy flush. Rozważ zwiększenie max-buffer-size.");
+            plugin.getLogger().warning("Bufor pelny! Zwieksz max-buffer-size w config.yml.");
         }
-        // Jeśli bufor jest w 80% pełny - wymuś wcześniejszy flush
         if (queue.size() >= maxBuffer * 0.8) {
             writerThread.interrupt();
         }
     }
 
-    // ── Zapytania (odczyt) ────────────────────────────────────────────────────
-
     public List<String[]> getCommands(String name, int limit) {
         return query(
             "SELECT ts,name,world,ROUND(x,1),ROUND(y,1),ROUND(z,1),cmd,alert " +
             "FROM sg_commands WHERE name LIKE ? ORDER BY ts DESC LIMIT ?",
-            name, limit
-        );
+            name, limit);
     }
 
     public List<String[]> getContainers(String name, int limit) {
         return query(
             "SELECT ts,name,action,world,x,y,z,ctype,item,amount " +
             "FROM sg_containers WHERE name LIKE ? ORDER BY ts DESC LIMIT ?",
-            name, limit
-        );
+            name, limit);
     }
 
     public List<String[]> getContainersAtPos(String world, int x, int y, int z, int limit) {
         return query(
             "SELECT ts,name,action,ctype,item,amount " +
             "FROM sg_containers WHERE world=? AND x=? AND y=? AND z=? ORDER BY ts DESC LIMIT ?",
-            world, x, y, z, limit
-        );
+            world, x, y, z, limit);
     }
 
     public List<String[]> getBlocks(String name, int limit) {
         return query(
             "SELECT ts,name,action,world,x,y,z,btype " +
             "FROM sg_blocks WHERE name LIKE ? ORDER BY ts DESC LIMIT ?",
-            name, limit
-        );
+            name, limit);
     }
 
     public List<String[]> searchAll(String phrase, int limit) {
@@ -334,7 +296,9 @@ public class DatabaseManager {
 
     private List<String[]> query(String sql, Object... params) {
         List<String[]> rows = new ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        // Odczyt wymaga autoCommit=true lub osobnego polaczenia - uzywamy tymczasowego
+        try (Connection readConn = openReadConnection();
+             PreparedStatement ps = readConn.prepareStatement(sql)) {
             for (int i = 0; i < params.length; i++) {
                 if (params[i] instanceof String s) ps.setString(i + 1, s);
                 else if (params[i] instanceof Integer n) ps.setInt(i + 1, n);
@@ -349,25 +313,37 @@ public class DatabaseManager {
                 rows.add(row);
             }
         } catch (SQLException e) {
-            plugin.getLogger().warning("Błąd zapytania: " + e.getMessage());
+            plugin.getLogger().warning("Blad zapytania: " + e.getMessage());
         }
         return rows;
     }
 
-    // ── Zamknięcie ────────────────────────────────────────────────────────────
+    private Connection openReadConnection() throws SQLException {
+        if (dbType.equals("mysql")) {
+            String host = plugin.getConfig().getString("database.mysql.host", "localhost");
+            int port    = plugin.getConfig().getInt("database.mysql.port", 3306);
+            String db   = plugin.getConfig().getString("database.mysql.database", "serverguard");
+            String user = plugin.getConfig().getString("database.mysql.username", "root");
+            String pass = plugin.getConfig().getString("database.mysql.password", "");
+            return DriverManager.getConnection(
+                "jdbc:mysql://" + host + ":" + port + "/" + db + "?useSSL=false", user, pass);
+        } else {
+            String fileName = plugin.getConfig().getString("database.sqlite-file", "serverguard.db");
+            File dbFile = new File(plugin.getDataFolder(), fileName);
+            return DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+        }
+    }
 
     public void close() {
         running = false;
         writerThread.interrupt();
-        // Poczekaj max 10s na zapisanie pozostałych danych
         try { writerThread.join(10_000); } catch (InterruptedException ignored) {}
-        // Finalny flush tego co zostało
         List<LogEntry> remaining = new ArrayList<>();
         queue.drainTo(remaining);
         if (!remaining.isEmpty()) flush(remaining);
         try {
             if (connection != null && !connection.isClosed()) connection.close();
         } catch (SQLException ignored) {}
-        plugin.getLogger().info("Baza danych zamknięta. Wszystkie dane zapisane.");
+        plugin.getLogger().info("Baza danych zamknieta. Wszystkie dane zapisane.");
     }
 }
