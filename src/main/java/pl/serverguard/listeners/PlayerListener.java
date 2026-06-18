@@ -9,12 +9,32 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import pl.serverguard.ServerGuard;
 import pl.serverguard.managers.LogEntry;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
 public class PlayerListener implements Listener {
 
     private final ServerGuard plugin;
+    private Set<PlayerTeleportEvent.TeleportCause> loggedCauses = Set.of();
 
     public PlayerListener(ServerGuard plugin) {
         this.plugin = plugin;
+        reloadCauses();
+    }
+
+    public void reloadCauses() {
+        List<String> names = plugin.getConfig().getStringList("teleports.log-causes");
+        Set<PlayerTeleportEvent.TeleportCause> causes = new HashSet<>();
+        for (String name : names) {
+            try {
+                causes.add(PlayerTeleportEvent.TeleportCause.valueOf(name.trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("teleports.log-causes: nieznana przyczyna '" + name + "'");
+            }
+        }
+        loggedCauses = Set.copyOf(causes);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -40,9 +60,11 @@ public class PlayerListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTeleport(PlayerTeleportEvent event) {
+        if (!plugin.getConfig().getBoolean("teleports.enabled", true)) return;
         if (event.getTo() == null) return;
-        var cause = event.getCause();
-        if (cause == PlayerTeleportEvent.TeleportCause.UNKNOWN) return;
+
+        PlayerTeleportEvent.TeleportCause cause = event.getCause();
+        if (!loggedCauses.contains(cause)) return;
 
         var p = event.getPlayer();
         plugin.getDb().log(LogEntry.command(

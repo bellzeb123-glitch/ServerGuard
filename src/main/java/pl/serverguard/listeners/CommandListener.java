@@ -6,9 +6,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import pl.serverguard.ServerGuard;
+import pl.serverguard.managers.AdminAuditManager;
 import pl.serverguard.managers.LogEntry;
-
-import java.util.List;
 
 public class CommandListener implements Listener {
 
@@ -22,33 +21,37 @@ public class CommandListener implements Listener {
     public void onCommand(PlayerCommandPreprocessEvent event) {
         Player p = event.getPlayer();
         String cmd = event.getMessage();
-        String cmdLower = cmd.toLowerCase();
 
-        boolean isAdmin = p.hasPermission("serverguard.admin") || p.hasPermission("serverguard.bypass");
-
-        if (!isAdmin) {
-            // Sprawdź zablokowane
-            for (String b : plugin.getConfig().getStringList("commands.blocked-list")) {
-                if (cmdLower.startsWith(b.toLowerCase())) {
-                    event.setCancelled(true);
-                    p.sendMessage("§c[ServerGuard] §eTa komenda jest zablokowana.");
-                    plugin.getAlertManager().alertBlocked(p.getName(), cmd);
-                    plugin.getDb().log(LogEntry.command(
-                        p.getUniqueId().toString(), p.getName(),
-                        p.getWorld().getName(),
-                        p.getLocation().getX(), p.getLocation().getY(), p.getLocation().getZ(),
-                        "[ZABLOKOWANA] " + cmd, true
-                    ));
-                    return;
-                }
+        AdminAuditManager.AuditResult audit = plugin.getAdminAudit().check(p, cmd);
+        if (audit.violation()) {
+            if (audit.block()) {
+                event.setCancelled(true);
+                p.sendMessage(c(plugin.getAdminAudit().getPlayerMessage()));
             }
+
+            plugin.getAlertManager().alertUnauthorized(
+                p.getName(), cmd, audit.permission(),
+                p.getWorld().getName(),
+                p.getLocation().getX(), p.getLocation().getY(), p.getLocation().getZ(),
+                audit.block()
+            );
+
+            String logPrefix = audit.block() ? "[ZABLOKOWANA] " : "[AUDYT] ";
+            plugin.getDb().log(LogEntry.command(
+                p.getUniqueId().toString(), p.getName(),
+                p.getWorld().getName(),
+                p.getLocation().getX(), p.getLocation().getY(), p.getLocation().getZ(),
+                logPrefix + cmd, true
+            ));
+            return;
         }
 
-        // Sprawdź alerty
+        boolean isAdmin = p.hasPermission("serverguard.admin") || p.hasPermission("serverguard.bypass");
         boolean isAlert = false;
+
         if (!isAdmin) {
-            List<String> alertList = plugin.getConfig().getStringList("commands.alert-list");
-            for (String a : alertList) {
+            String cmdLower = cmd.toLowerCase();
+            for (String a : plugin.getConfig().getStringList("commands.alert-list")) {
                 if (cmdLower.startsWith(a.toLowerCase())) {
                     isAlert = true;
                     break;
@@ -70,5 +73,9 @@ public class CommandListener implements Listener {
                 cmd, isAlert
             ));
         }
+    }
+
+    private String c(String s) {
+        return s.replace("&", "§");
     }
 }

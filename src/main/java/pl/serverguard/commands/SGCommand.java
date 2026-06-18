@@ -21,7 +21,7 @@ public class SGCommand implements CommandExecutor {
         }
 
         sender.sendMessage("§6╔══════════════════════════════╗");
-        sender.sendMessage("§6║   §eServerGuard §6v1.0.0         ║");
+        sender.sendMessage("§6║   §eServerGuard §6v2.0.0         ║");
         sender.sendMessage("§6╠══════════════════════════════╣");
         sender.sendMessage("§6║ §a/sghistory <nick> [typ] [n]  §6║");
         sender.sendMessage("§6║   §7typy: komendy, pozycje,     §6║");
@@ -34,7 +34,7 @@ public class SGCommand implements CommandExecutor {
         sender.sendMessage("§6╚══════════════════════════════╝");
 
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
-            plugin.reloadConfig();
+            plugin.reloadAll();
             sender.sendMessage("§a[ServerGuard] Konfiguracja przeładowana.");
         }
 

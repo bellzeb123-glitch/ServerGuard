@@ -23,6 +23,12 @@ permissions:
   serverguard.admin:
     description: Dostep do komend ServerGuard
     default: op
+  serverguard.notify:
+    description: Otrzymuje alerty o probach uzycia komend admina
+    default: op
   serverguard.bypass:
-    description: Pomija alerty i blokady
+    description: Pomija logowanie komend gracza
+    default: false
+  serverguard.audit.bypass:
+    description: Pomija audyt i blokade komend admina
     default: false

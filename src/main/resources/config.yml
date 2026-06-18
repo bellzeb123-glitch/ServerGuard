@@ -12,6 +12,7 @@ max-buffer-size: 500
 # Monitorowanie komend
 commands:
   log-all: true
+  # Dodatkowe alerty gdy ktoś Z uprawnieniem użyje wrażliwej komendy (opcjonalny audit trail)
   alert-list:
     - "/op"
     - "/deop"
@@ -26,16 +27,284 @@ commands:
     - "/setblock"
     - "/fill"
     - "/execute"
-    - "//set"
-    - "//fill"
-    - "//replace"
-    - "//copy"
-    - "//paste"
-  blocked-list:
+
+# Teleporty — domyślnie tylko admin/plugin (bez ender pearl, chorus, portalów)
+teleports:
+  enabled: true
+  log-causes:
+    - COMMAND
+    - PLUGIN
+    - SPECTATE
+
+# Logi moderacji (gamemode, kick, konsola)
+moderation:
+  log-gamemode: true
+  log-kicks: true
+  log-console-commands: true
+  console-alert-prefixes:
     - "/op"
     - "/deop"
+    - "/ban"
+    - "/pardon"
+    - "/kick"
+    - "/gamemode"
+    - "/gm"
+    - "/give"
     - "/stop"
     - "/restart"
+
+# Audyt komend admina — wykrywa próby użycia bez wymaganego uprawnienia (vanilla + Bell)
+admin-audit:
+  enabled: true
+  notify-permission: serverguard.notify
+  bypass-permission: serverguard.audit.bypass
+  block-unauthorized: true
+  player-message: "&c[ServerGuard] &eTa komenda jest zablokowana."
+  rules:
+    # --- Vanilla Minecraft ---
+    - pattern: gamemode
+      permission: minecraft.command.gamemode
+      block: true
+    - pattern: gm
+      permission: minecraft.command.gamemode
+      block: true
+    - pattern: op
+      permission: minecraft.command.op
+      block: true
+    - pattern: deop
+      permission: minecraft.command.deop
+      block: true
+    - pattern: ban
+      permission: minecraft.command.ban
+      block: true
+    - pattern: pardon
+      permission: minecraft.command.pardon
+      block: true
+    - pattern: kick
+      permission: minecraft.command.kick
+      block: true
+    - pattern: give
+      permission: minecraft.command.give
+      block: true
+    - pattern: stop
+      permission: minecraft.command.stop
+      block: true
+    - pattern: restart
+      permission: bukkit.command.restart
+      block: true
+    - pattern: summon
+      permission: minecraft.command.summon
+      block: true
+    - pattern: setblock
+      permission: minecraft.command.setblock
+      block: true
+    - pattern: fill
+      permission: minecraft.command.fill
+      block: true
+    - pattern: execute
+      permission: minecraft.command.execute
+      block: true
+    - pattern: tp
+      permission: minecraft.command.teleport
+      block: false
+    - pattern: teleport
+      permission: minecraft.command.teleport
+      block: false
+    - pattern: kill
+      permission: minecraft.command.kill
+      block: true
+    - pattern: clear
+      permission: minecraft.command.clear
+      block: true
+    - pattern: effect
+      permission: minecraft.command.effect
+      block: true
+    - pattern: enchant
+      permission: minecraft.command.enchant
+      block: true
+  # WorldEdit (jeśli zainstalowany)
+    - pattern: "//set"
+      permission: worldedit.region.set
+      block: true
+    - pattern: "//fill"
+      permission: worldedit.region.fill
+      block: true
+    - pattern: "//replace"
+      permission: worldedit.region.replace
+      block: true
+    - pattern: "//copy"
+      permission: worldedit.clipboard.copy
+      block: true
+    - pattern: "//paste"
+      permission: worldedit.clipboard.paste
+      block: true
+    # --- BellChat ---
+    - pattern: mute
+      permission: bellchat.mute
+      block: true
+    - pattern: unmute
+      permission: bellchat.mute
+      block: true
+    - pattern: clearchat
+      permission: bellchat.clearchat
+      block: true
+    - pattern: cc
+      permission: bellchat.clearchat
+      block: true
+    - pattern: chatlock
+      permission: bellchat.chatlock
+      block: true
+    - pattern: cl
+      permission: bellchat.chatlock
+      block: true
+    - pattern: msgspy
+      permission: bellchat.spy
+      block: true
+    - pattern: spy
+      permission: bellchat.spy
+      block: true
+    - pattern: bch mute
+      permission: bellchat.mute
+      block: true
+    - pattern: bellchat mute
+      permission: bellchat.mute
+      block: true
+    - pattern: bch unmute
+      permission: bellchat.mute
+      block: true
+    - pattern: bellchat unmute
+      permission: bellchat.mute
+      block: true
+    - pattern: bch clearchat
+      permission: bellchat.clearchat
+      block: true
+    - pattern: bch chatlock
+      permission: bellchat.chatlock
+      block: true
+    - pattern: bch spy
+      permission: bellchat.spy
+      block: true
+    - pattern: bch gui
+      permission: bellchat.admin
+      block: true
+    - pattern: bch reload
+      permission: bellchat.admin
+      block: true
+    - pattern: bch lang
+      permission: bellchat.admin
+      block: true
+    - pattern: bellchat gui
+      permission: bellchat.admin
+      block: true
+    - pattern: bellchat reload
+      permission: bellchat.admin
+      block: true
+    # --- BellMarket ---
+    - pattern: bc give
+      permission: bellmarket.coins.give
+      block: true
+    - pattern: bc take
+      permission: bellmarket.coins.take
+      block: true
+    - pattern: bc set
+      permission: bellmarket.coins.set
+      block: true
+    - pattern: bellcoins give
+      permission: bellmarket.coins.give
+      block: true
+    - pattern: bellcoins take
+      permission: bellmarket.coins.take
+      block: true
+    - pattern: bellcoins set
+      permission: bellmarket.coins.set
+      block: true
+    - pattern: coins give
+      permission: bellmarket.coins.give
+      block: true
+    - pattern: vt give
+      permission: bellmarket.viptoken.admin
+      block: true
+    - pattern: vt take
+      permission: bellmarket.viptoken.admin
+      block: true
+    - pattern: vt set
+      permission: bellmarket.viptoken.admin
+      block: true
+    - pattern: viptokens give
+      permission: bellmarket.viptoken.admin
+      block: true
+    - pattern: bm admin
+      permission: bellmarket.admin
+      block: true
+    - pattern: bm reload
+      permission: bellmarket.admin
+      block: true
+    - pattern: bm prices
+      permission: bellmarket.admin
+      block: true
+    - pattern: bm generate
+      permission: bellmarket.admin
+      block: true
+    - pattern: bm lang
+      permission: bellmarket.admin
+      block: true
+    - pattern: bellmarket admin
+      permission: bellmarket.admin
+      block: true
+    - pattern: bellmarket reload
+      permission: bellmarket.admin
+      block: true
+    # --- BellLands ---
+    - pattern: claim admin
+      permission: belllands.admin
+      block: true
+    - pattern: belllands language
+      permission: belllands.admin
+      block: true
+    - pattern: region
+      permission: belllandspro.region.manage
+      block: true
+    # --- BellTrade ---
+    - pattern: btrade admin
+      permission: belltrade.admin
+      block: true
+    - pattern: belltrade admin
+      permission: belltrade.admin
+      block: true
+    - pattern: btrade reload
+      permission: belltrade.admin
+      block: true
+  # --- BellTrade Pro ---
+    - pattern: btradepro
+      permission: belltradepro.admin
+      block: true
+    - pattern: btpro
+      permission: belltradepro.admin
+      block: true
+    - pattern: belltradepro
+      permission: belltradepro.admin
+      block: true
+    # --- BellGate ---
+    - pattern: bellgate
+      permission: bellgate.admin
+      block: true
+    # --- ServerGuard ---
+    - pattern: sg
+      permission: serverguard.admin
+      block: true
+    - pattern: sghistory
+      permission: serverguard.admin
+      block: true
+    - pattern: sgsearch
+      permission: serverguard.admin
+      block: true
+    # --- SkinStudio ---
+    - pattern: skinstudio admin
+      permission: skinstudio.admin
+      block: true
+    - pattern: skintoken
+      permission: skinstudio.admin
+      block: true
 
 # Monitorowanie skrzyń
 containers:
@@ -77,11 +346,18 @@ alerts:
   enabled: true
   prefix: "&c[&4SG&c] &e"
   sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+  # Minimalny odstęp między podobnymi alertami (sekundy). 0 = wyłączony.
+  cooldown-seconds: 30
 
 # Baza danych
 database:
   type: sqlite
   sqlite-file: "serverguard.db"
+  retention:
+    enabled: true
+    days: 30
+    interval-hours: 24
+    initial-delay-minutes: 10
   mysql:
     host: "localhost"
     port: 3306

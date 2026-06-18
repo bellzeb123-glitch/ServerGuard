@@ -128,10 +128,14 @@ public class DatabaseManager {
 
             s.execute("CREATE INDEX IF NOT EXISTS idx_cmd_name  ON sg_commands(name, ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_cmd_alert ON sg_commands(alert, ts)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_cmd_ts    ON sg_commands(ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_con_name  ON sg_containers(name, ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_con_pos   ON sg_containers(world, x, y, z)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_con_ts    ON sg_containers(ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_blk_name  ON sg_blocks(name, ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_blk_pos   ON sg_blocks(world, x, y, z)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_blk_ts    ON sg_blocks(ts)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_ses_ts    ON sg_sessions(ts)");
         }
         plugin.getLogger().info("Tabele bazy danych gotowe.");
         // Dopiero teraz wlaczamy tryb manualnych transakcji dla szybkiego zapisu
@@ -345,5 +349,51 @@ public class DatabaseManager {
             if (connection != null && !connection.isClosed()) connection.close();
         } catch (SQLException ignored) {}
         plugin.getLogger().info("Baza danych zamknieta. Wszystkie dane zapisane.");
+    }
+
+    /**
+     * Usuwa wpisy starsze niż retention-days. Wywoływane asynchronicznie z harmonogramu.
+     */
+    public int purgeOldEntries(int retentionDays) {
+        if (retentionDays <= 0) return 0;
+
+        int total = 0;
+        try (Connection purgeConn = openWriteConnection()) {
+            purgeConn.setAutoCommit(false);
+            for (String table : List.of("sg_commands", "sg_containers", "sg_blocks", "sg_sessions")) {
+                String sql = dbType.equals("mysql")
+                    ? "DELETE FROM " + table + " WHERE ts < DATE_SUB(NOW(), INTERVAL ? DAY)"
+                    : "DELETE FROM " + table + " WHERE ts < datetime('now', ?)";
+                try (PreparedStatement ps = purgeConn.prepareStatement(sql)) {
+                    if (dbType.equals("mysql")) {
+                        ps.setInt(1, retentionDays);
+                    } else {
+                        ps.setString(1, "-" + retentionDays + " days");
+                    }
+                    total += ps.executeUpdate();
+                }
+            }
+            purgeConn.commit();
+            plugin.getLogger().info("Retencja: usunięto " + total + " wpisów starszych niż " + retentionDays + " dni.");
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Błąd retencji bazy: " + e.getMessage());
+        }
+        return total;
+    }
+
+    private Connection openWriteConnection() throws SQLException {
+        if (dbType.equals("mysql")) {
+            String host = plugin.getConfig().getString("database.mysql.host", "localhost");
+            int port    = plugin.getConfig().getInt("database.mysql.port", 3306);
+            String db   = plugin.getConfig().getString("database.mysql.database", "serverguard");
+            String user = plugin.getConfig().getString("database.mysql.username", "root");
+            String pass = plugin.getConfig().getString("database.mysql.password", "");
+            return DriverManager.getConnection(
+                "jdbc:mysql://" + host + ":" + port + "/" + db + "?useSSL=false", user, pass);
+        } else {
+            String fileName = plugin.getConfig().getString("database.sqlite-file", "serverguard.db");
+            File dbFile = new File(plugin.getDataFolder(), fileName);
+            return DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+        }
     }
 }
