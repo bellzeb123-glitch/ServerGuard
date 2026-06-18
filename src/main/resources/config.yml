@@ -1,6 +1,13 @@
 # ServerGuard v2 - Konfiguracja
 # Zoptymalizowana pod 50+ graczy
 
+# Język panelu GUI: pl | en
+language: pl
+
+# Gracze na liście obserwacji (priorytet w GUI, oznaczenie ★)
+watch:
+  players: []
+
 # Jak często opróżniać bufor i zapisywać do bazy (sekundy)
 # Mniejsza wartość = szybsze logi, większe obciążenie. Zalecane: 3-10
 flush-interval: 5

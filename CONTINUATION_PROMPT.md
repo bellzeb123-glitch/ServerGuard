@@ -9,68 +9,60 @@ Kontynuuję rozwój pluginu ServerGuard w ekosystemie Bell (Minecraft Purpur/Pap
 
 ## Stan projektu
 - Ścieżka: F:\Projekty\ServerGuard
-- Wersja: 2.0.0 (plugin.yml), main: pl.serverguard.ServerGuard
+- Wersja: 2.1.1 (plugin.yml), main: pl.serverguard.ServerGuard
 - Live na serwerze produkcyjnym — monitoring bezpieczeństwa
 
-## Co już działa (v2.0.0)
-- Logowanie komend graczy (nie adminów z serverguard.bypass)
-- Logowanie skrzyń, wybranych bloków, sesji
+## Co już działa (v2.1.1)
+- Audyt komend admina (vanilla + Bell) — alert + blokada bez uprawnień
+- Logowanie komend, skrzyń, bloków, sesji
+- Faza 1: filtr TP, gamemode/kick log, konsola, cooldown alertów, retencja DB
+- Panel GUI `/sg` / `/sg gui` — gracze, monitoring, reguły audytu, watch, PL/EN (LangManager)
 - SQLite z buforem (500 wpisów, flush ~5s)
-- Komendy (wszystkie serverguard.admin):
-  - /sg, /sg reload
-  - /sghistory <nick> [komendy|skrzynie|bloki] [ilość]
-  - /sgsearch <fraza>
-- Uprawnienia: serverguard.admin (op), serverguard.bypass (false)
+- Komendy (serverguard.admin): /sg, /sg reload, /sghistory, /sgsearch
+- Uprawnienia: serverguard.admin, serverguard.notify, serverguard.bypass, serverguard.audit.bypass
 
 ## Struktura kodu
-- listeners/: CommandListener, ContainerListener, BlockListener, PlayerListener
-- managers/: DatabaseManager, AlertManager, LogEntry
+- listeners/: CommandListener, ContainerListener, BlockListener, PlayerListener, ModerationListener, ConsoleCommandListener, GuiListener, AdminChatListener
+- managers/: DatabaseManager, AlertManager, AdminAuditManager, AlertCooldown, WatchManager, ConfigListManager, LogEntry
+- gui/: AdminGuiService, GuiHolder, GuiState
+- config/: LangManager
 - commands/: SGCommand, SGHistoryCommand, SGSearchCommand
 
 ## Kontekst ekosystemu
-- Dokumentacja: F:\Projekty\Bell-Ecosystem\serverguard\architecture.md
+- Dokumentacja użytkowa: F:\Projekty\Bell-Ecosystem\docs\serverguard\
+- Dokumentacja techniczna: F:\Projekty\Bell-Ecosystem\serverguard\architecture.md
+- Konwencje (w tym struktura docs/): F:\Projekty\Bell-Ecosystem\shared\conventions.md
 - Powiązane: BellTrade, BellLands, BellMarket, BellChat, VIPDeathChest, BellGate
-- ServerGuard NIE wykrywa cheata fly — tylko komendy i wybrane akcje świata
-- Docelowo integracja z BellCenter (panel web) i alerty Discord (jak BellTrade Pro)
 
-## Roadmapa (priorytet użytkownika)
-1. **Admin command audit** — auto-detekcja /gamemode, /op, /give, komend Bell* admin; powiadomienie online adminów (serverguard.notify)
-2. **Anti-fly / movement flags** — alert gdy gracz bez uprawnień utrzymuje flight (Y velocity, allowFlight false)
-3. **Gamemode change log** — kto zmienił komu gamemode (vanilla + pluginy)
-4. **Webhook Discord** — krytyczne alerty (wzór: BellTrade-Pro DiscordWebhookService)
-5. **API dla innych pluginów Bell** — BellChat mute/ban → ServerGuard log
-
-## Config docelowy (szkic)
-admin-audit:
-  enabled: true
-  vanilla-commands: [gamemode, op, deop, ban, kick, give]
-  notify-permission: serverguard.notify
-  bypass-permission: serverguard.audit.bypass
-
-movement:
-  flight-alert: true
-  max-air-ticks-without-elytra: ...
+## Roadmapa (kolejność)
+1. ~~Admin command audit~~ ✅
+2. ~~Faza 1 (TP, gamemode, kick, cooldown, retencja)~~ ✅
+3. ~~Panel GUI + PL/EN~~ ✅
+4. Webhook Discord — krytyczne alerty
+5. API BellChat → log mute/ban
+6. Anti-fly / movement flags (lekki alert)
 
 ## Zasady kodu
 - Java 21, Paper API 1.21
 - Bez over-engineeringu — mały, czytelny plugin
 - Uprawnienia zawsze w executorze + plugin.yml
-- Dokumentacja w Bell-Ecosystem/serverguard/
-
-## Ostatni incydent na serwerze
-Nowy gracz latał bez /fly w logach ServerGuard — to normalne (cheat klienta). Potrzebujemy movement audit + zewnętrzny anticheat.
+- Instrukcje/promo → Bell-Ecosystem/docs/serverguard/ · architektura → serverguard/
 
 ## Zadanie na tę sesję
-[OPISZ TUTAJ: np. "Zaimplementuj admin-audit dla /gamemode i powiadomienia ingame"]
+[OPISZ TUTAJ]
 ```
 
 ---
 
-## Build
+## Build (lokalnie — przed wgraniem na serwer)
 
 ```powershell
 cd F:\Projekty\ServerGuard
-.\mvnw.cmd clean package
+.\build.ps1
 ```
 
-JAR: `target/ServerGuard-2.0.0.jar` → `plugins/`
+JAR: `target/ServerGuardV2-2.1.1.jar` → `plugins/`
+
+Wymaga JDK 21+ (`JAVA_HOME` lub auto-wykrycie w `build.ps1`). Maven wrapper: `mvnw.cmd`.
+
+Po push na GitHub — dodatkowo artefakt z Actions (backup).

@@ -45,12 +45,11 @@ public class AlertManager {
         if (!cooldown.shouldNotify(cooldownKey)) return;
 
         int suppressed = cooldown.markSent(cooldownKey);
-        String fullMsg = msg;
-        if (suppressed > 0) {
-            fullMsg += " &8(+" + suppressed + " podobnych)";
-        }
+        final String alertMsg = suppressed > 0
+            ? msg + " &8(+" + suppressed + " podobnych)"
+            : msg;
 
-        String full = prefix + fullMsg;
+        final String full = prefix + alertMsg;
         Bukkit.getScheduler().runTask(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (hasAnyPermission(p, permissions)) {
@@ -58,7 +57,7 @@ public class AlertManager {
                     p.playSound(p.getLocation(), alertSound, 0.8f, 1f);
                 }
             }
-            Bukkit.getConsoleSender().sendMessage("[SG ALERT] " + strip(fullMsg));
+            Bukkit.getConsoleSender().sendMessage("[SG ALERT] " + strip(alertMsg));
         });
     }
 

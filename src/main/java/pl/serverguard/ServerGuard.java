@@ -5,10 +5,14 @@ import org.bukkit.scheduler.BukkitTask;
 import pl.serverguard.commands.SGCommand;
 import pl.serverguard.commands.SGHistoryCommand;
 import pl.serverguard.commands.SGSearchCommand;
+import pl.serverguard.config.LangManager;
+import pl.serverguard.gui.AdminGuiService;
 import pl.serverguard.listeners.*;
 import pl.serverguard.managers.AdminAuditManager;
 import pl.serverguard.managers.AlertManager;
+import pl.serverguard.managers.ConfigListManager;
 import pl.serverguard.managers.DatabaseManager;
+import pl.serverguard.managers.WatchManager;
 
 public class ServerGuard extends JavaPlugin {
 
@@ -16,6 +20,10 @@ public class ServerGuard extends JavaPlugin {
     private DatabaseManager db;
     private AlertManager alertManager;
     private AdminAuditManager adminAudit;
+    private WatchManager watchManager;
+    private ConfigListManager configLists;
+    private LangManager lang;
+    private AdminGuiService adminGui;
     private PlayerListener playerListener;
     private BukkitTask retentionTask;
 
@@ -23,12 +31,20 @@ public class ServerGuard extends JavaPlugin {
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
+        saveResource("lang/pl.yml", false);
+        saveResource("lang/en.yml", false);
+
+        lang = new LangManager(this);
+        lang.load();
 
         db = new DatabaseManager(this);
         db.initialize();
 
         alertManager = new AlertManager(this);
         adminAudit = new AdminAuditManager(this);
+        watchManager = new WatchManager(this);
+        configLists = new ConfigListManager(this);
+        adminGui = new AdminGuiService(this);
 
         getServer().getPluginManager().registerEvents(new CommandListener(this), this);
         getServer().getPluginManager().registerEvents(new ContainerListener(this), this);
@@ -37,6 +53,8 @@ public class ServerGuard extends JavaPlugin {
         getServer().getPluginManager().registerEvents(playerListener, this);
         getServer().getPluginManager().registerEvents(new ModerationListener(this), this);
         getServer().getPluginManager().registerEvents(new ConsoleCommandListener(this), this);
+        getServer().getPluginManager().registerEvents(new GuiListener(this), this);
+        getServer().getPluginManager().registerEvents(new AdminChatListener(this), this);
 
         getCommand("sg").setExecutor(new SGCommand(this));
         getCommand("sghistory").setExecutor(new SGHistoryCommand(this));
@@ -44,10 +62,7 @@ public class ServerGuard extends JavaPlugin {
 
         scheduleRetention();
 
-        getLogger().info("ServerGuard v2 aktywny. Bufor: "
-            + getConfig().getInt("max-buffer-size", 500)
-            + " wpisów, flush co "
-            + getConfig().getLong("flush-interval", 5) + "s.");
+        getLogger().info("ServerGuard v2.1 aktywny. Panel: /sg gui");
     }
 
     @Override
@@ -77,8 +92,10 @@ public class ServerGuard extends JavaPlugin {
 
     public void reloadAll() {
         reloadConfig();
+        lang.load();
         adminAudit.reload();
         alertManager.reload();
+        watchManager.reload();
         playerListener.reloadCauses();
         scheduleRetention();
     }
@@ -87,4 +104,8 @@ public class ServerGuard extends JavaPlugin {
     public DatabaseManager getDb()          { return db; }
     public AlertManager getAlertManager()   { return alertManager; }
     public AdminAuditManager getAdminAudit() { return adminAudit; }
+    public WatchManager getWatchManager()   { return watchManager; }
+    public ConfigListManager getConfigLists() { return configLists; }
+    public LangManager getLang()            { return lang; }
+    public AdminGuiService getAdminGui()    { return adminGui; }
 }

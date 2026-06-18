@@ -3,6 +3,7 @@ package pl.serverguard.commands;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import pl.serverguard.ServerGuard;
 
 public class SGCommand implements CommandExecutor {
@@ -20,24 +21,36 @@ public class SGCommand implements CommandExecutor {
             return true;
         }
 
-        sender.sendMessage("§6╔══════════════════════════════╗");
-        sender.sendMessage("§6║   §eServerGuard §6v2.0.0         ║");
-        sender.sendMessage("§6╠══════════════════════════════╣");
-        sender.sendMessage("§6║ §a/sghistory <nick> [typ] [n]  §6║");
-        sender.sendMessage("§6║   §7typy: komendy, pozycje,     §6║");
-        sender.sendMessage("§6║   §7       skrzynie, bloki       §6║");
-        sender.sendMessage("§6║ §a/sgsearch <fraza>            §6║");
-        sender.sendMessage("§6║ §a/sg reload                   §6║");
-        sender.sendMessage("§6╠══════════════════════════════╣");
-        sender.sendMessage("§6║ §7Monitorowane: komendy, pozycje,§6║");
-        sender.sendMessage("§6║ §7skrzynie, bloki, sesje         §6║");
-        sender.sendMessage("§6╚══════════════════════════════╝");
-
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             plugin.reloadAll();
             sender.sendMessage("§a[ServerGuard] Konfiguracja przeładowana.");
+            return true;
         }
 
+        if (args.length > 0 && args[0].equalsIgnoreCase("help")) {
+            sendHelp(sender);
+            return true;
+        }
+
+        if (sender instanceof Player player) {
+            if (args.length == 0 || args[0].equalsIgnoreCase("gui")) {
+                plugin.getAdminGui().openMain(player);
+                return true;
+            }
+        }
+
+        sendHelp(sender);
         return true;
+    }
+
+    private void sendHelp(CommandSender sender) {
+        sender.sendMessage("§6╔══════════════════════════════╗");
+        sender.sendMessage("§6║   §eServerGuard §6v2.1.1         ║");
+        sender.sendMessage("§6╠══════════════════════════════╣");
+        sender.sendMessage("§6║ §a/sg §7lub §a/sg gui §6— panel GUI  ║");
+        sender.sendMessage("§6║ §a/sg reload §6— przeładuj config ║");
+        sender.sendMessage("§6║ §a/sghistory <nick> [typ] [n]  §6║");
+        sender.sendMessage("§6║ §a/sgsearch <fraza>            §6║");
+        sender.sendMessage("§6╚══════════════════════════════╝");
     }
 }

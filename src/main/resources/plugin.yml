@@ -1,14 +1,14 @@
 name: ServerGuard
-version: 2.0.0
+version: 2.1.1
 main: pl.serverguard.ServerGuard
 api-version: '1.21'
-description: "Lekki monitoring serwera - komendy, skrzynie, bloki."
+description: "Monitoring serwera - komendy, skrzynie, bloki, panel GUI."
 authors: [ServerGuard]
 
 commands:
   sg:
-    description: Glowna komenda ServerGuard
-    usage: /sg <podkomenda>
+    description: Panel administracyjny ServerGuard
+    usage: /sg [gui|reload|help]
     permission: serverguard.admin
   sghistory:
     description: Historia gracza

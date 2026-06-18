@@ -280,6 +280,43 @@ public class DatabaseManager {
             name, limit);
     }
 
+    public List<String[]> getSessions(String name, int limit) {
+        return query(
+            "SELECT ts,name,action,ip,world,ROUND(x,1),ROUND(y,1),ROUND(z,1) " +
+            "FROM sg_sessions WHERE name LIKE ? ORDER BY ts DESC LIMIT ?",
+            name, limit);
+    }
+
+    public List<String> getRecentPlayerNames(int limit) {
+        List<String[]> rows = query(
+            "SELECT name FROM sg_commands GROUP BY name ORDER BY MAX(ts) DESC LIMIT ?",
+            limit);
+        List<String> names = new ArrayList<>();
+        for (String[] row : rows) names.add(row[0]);
+        return names;
+    }
+
+    public int[] getPlayerCounts(String name) {
+        return new int[] {
+            count("SELECT COUNT(*) FROM sg_commands WHERE name LIKE ?", name),
+            count("SELECT COUNT(*) FROM sg_containers WHERE name LIKE ?", name),
+            count("SELECT COUNT(*) FROM sg_blocks WHERE name LIKE ?", name),
+            count("SELECT COUNT(*) FROM sg_sessions WHERE name LIKE ?", name)
+        };
+    }
+
+    private int count(String sql, String name) {
+        try (Connection readConn = openReadConnection();
+             PreparedStatement ps = readConn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Blad count: " + e.getMessage());
+        }
+        return 0;
+    }
+
     public List<String[]> searchAll(String phrase, int limit) {
         List<String[]> out = new ArrayList<>();
         String p = "%" + phrase + "%";

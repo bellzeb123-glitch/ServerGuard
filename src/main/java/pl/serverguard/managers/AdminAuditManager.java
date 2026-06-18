@@ -70,6 +70,44 @@ public class AdminAuditManager {
         return playerMessage;
     }
 
+    public List<AuditRule> getRules() {
+        return rules;
+    }
+
+    public void setEnabled(boolean value) {
+        plugin.getConfig().set("admin-audit.enabled", value);
+        plugin.saveConfig();
+        reload();
+    }
+
+    public void addRule(String pattern, String permission, boolean block) {
+        List<AuditRule> updated = new ArrayList<>(rules);
+        updated.add(new AuditRule(pattern.toLowerCase(), permission, block));
+        persistRules(updated);
+        reload();
+    }
+
+    public void removeRule(int index) {
+        if (index < 0 || index >= rules.size()) return;
+        List<AuditRule> updated = new ArrayList<>(rules);
+        updated.remove(index);
+        persistRules(updated);
+        reload();
+    }
+
+    private void persistRules(List<AuditRule> updated) {
+        List<java.util.Map<String, Object>> maps = new ArrayList<>();
+        for (AuditRule rule : updated) {
+            java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("pattern", rule.pattern());
+            map.put("permission", rule.permission());
+            map.put("block", rule.block());
+            maps.add(map);
+        }
+        plugin.getConfig().set("admin-audit.rules", maps);
+        plugin.saveConfig();
+    }
+
     public AuditResult check(Player player, String fullCommand) {
         if (!enabled || player.hasPermission(bypassPermission)) {
             return AuditResult.ok();
