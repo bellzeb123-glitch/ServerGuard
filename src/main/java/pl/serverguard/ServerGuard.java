@@ -30,6 +30,7 @@ public class ServerGuard extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        printBanner();
         saveDefaultConfig();
         saveResource("lang/pl.yml", false);
         saveResource("lang/en.yml", false);
@@ -108,4 +109,20 @@ public class ServerGuard extends JavaPlugin {
     public ConfigListManager getConfigLists() { return configLists; }
     public LangManager getLang()            { return lang; }
     public AdminGuiService getAdminGui()    { return adminGui; }
+
+    private void printBanner() {
+        var c = org.bukkit.Bukkit.getConsoleSender();
+        boolean proActive = org.bukkit.Bukkit.getPluginManager().getPlugin("ServerGuardPro") != null;
+        c.sendMessage("§r");
+        c.sendMessage("§6  ██████╗ ███████╗██╗     ██╗          ");
+        c.sendMessage("§6  ██╔══██╗██╔════╝██║     ██║          ");
+        c.sendMessage("§6  ██████╔╝█████╗  ██║     ██║          ");
+        c.sendMessage("§6  ██╔══██╗██╔══╝  ██║     ██║          ");
+        c.sendMessage("§6  ██████╔╝███████╗███████╗███████╗§r§f Guard");
+        c.sendMessage("§6  ╚═════╝ ╚══════╝╚══════╝╚══════╝     ");
+        c.sendMessage("§r");
+        c.sendMessage("§7  Version §f" + getDescription().getVersion() + "  §7│  Author §bBellzeb");
+        c.sendMessage("§7  Status  §aFree §7│ " + (proActive ? "§5Pro §aActive" : "§7Pro §5Coming Soon"));
+        c.sendMessage("§r");
+    }
 }
