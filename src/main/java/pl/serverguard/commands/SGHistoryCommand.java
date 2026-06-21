@@ -1,5 +1,6 @@
 package pl.serverguard.commands;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -35,25 +36,43 @@ public class SGHistoryCommand implements CommandExecutor {
         }
         limit = Math.min(limit, 100);
 
-        sender.sendMessage("§6━━━━━━━━━━ §eHistoria §7" + playerName + " §e[" + type + "] §6━━━━━━━━━━");
-
         switch (type) {
-            case "komendy" -> showCommands(sender, playerName, limit);
-            case "skrzynie" -> showContainers(sender, playerName, limit);
-            case "bloki" -> showBlocks(sender, playerName, limit);
+            case "komendy", "skrzynie", "bloki" -> {}
             default -> {
                 sender.sendMessage("§cNieznany typ. Użyj: komendy, skrzynie, bloki");
                 return true;
             }
         }
 
-        sender.sendMessage("§6━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        sender.sendMessage("§6━━━━━━━━━━ §eHistoria §7" + playerName + " §e[" + type + "] §6━━━━━━━━━━");
+
+        final int queryLimit = limit;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            List<String[]> rows = switch (type) {
+                case "komendy"  -> plugin.getDb().getCommands(playerName, queryLimit);
+                case "skrzynie" -> plugin.getDb().getContainers(playerName, queryLimit);
+                case "bloki"    -> plugin.getDb().getBlocks(playerName, queryLimit);
+                default         -> List.of();
+            };
+
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (rows.isEmpty()) {
+                    sender.sendMessage("§7Brak danych.");
+                } else {
+                    switch (type) {
+                        case "komendy"  -> formatCommands(sender, rows);
+                        case "skrzynie" -> formatContainers(sender, rows);
+                        case "bloki"    -> formatBlocks(sender, rows);
+                    }
+                }
+                sender.sendMessage("§6━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            });
+        });
+
         return true;
     }
 
-    private void showCommands(CommandSender sender, String name, int limit) {
-        List<String[]> rows = plugin.getDb().getCommands(name, limit);
-        if (rows.isEmpty()) { sender.sendMessage("§7Brak danych."); return; }
+    private void formatCommands(CommandSender sender, List<String[]> rows) {
         for (String[] r : rows) {
             String alert = "1".equals(r[7]) ? " §c[ALERT]" : "";
             sender.sendMessage("§7" + r[0] + " §e" + r[6] + alert);
@@ -61,9 +80,7 @@ public class SGHistoryCommand implements CommandExecutor {
         }
     }
 
-    private void showContainers(CommandSender sender, String name, int limit) {
-        List<String[]> rows = plugin.getDb().getContainers(name, limit);
-        if (rows.isEmpty()) { sender.sendMessage("§7Brak danych."); return; }
+    private void formatContainers(CommandSender sender, List<String[]> rows) {
         for (String[] r : rows) {
             String color = "WYJĄŁ".equals(r[2]) ? "§c" : "WŁOŻYŁ".equals(r[2]) ? "§a" : "§e";
             String item = r[8] != null ? " §f" + r[8] + " x" + r[9] : "";
@@ -72,9 +89,7 @@ public class SGHistoryCommand implements CommandExecutor {
         }
     }
 
-    private void showBlocks(CommandSender sender, String name, int limit) {
-        List<String[]> rows = plugin.getDb().getBlocks(name, limit);
-        if (rows.isEmpty()) { sender.sendMessage("§7Brak danych."); return; }
+    private void formatBlocks(CommandSender sender, List<String[]> rows) {
         for (String[] r : rows) {
             String color = "ZNISZCZYŁ".equals(r[2]) ? "§c" : "§a";
             sender.sendMessage("§7" + r[0] + " " + color + r[2] + " §f" + r[7]

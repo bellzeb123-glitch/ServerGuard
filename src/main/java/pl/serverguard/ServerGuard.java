@@ -30,7 +30,7 @@ public class ServerGuard extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        printBanner();
+        getServer().getScheduler().runTaskLater(this, this::printBanner, 1L);
         saveDefaultConfig();
         saveResource("lang/pl.yml", false);
         saveResource("lang/en.yml", false);
@@ -111,8 +111,8 @@ public class ServerGuard extends JavaPlugin {
     public AdminGuiService getAdminGui()    { return adminGui; }
 
     private void printBanner() {
+        if (org.bukkit.Bukkit.getPluginManager().getPlugin("ServerGuardPro") != null) return;
         var c = org.bukkit.Bukkit.getConsoleSender();
-        boolean proActive = org.bukkit.Bukkit.getPluginManager().getPlugin("ServerGuardPro") != null;
         c.sendMessage("§r");
         c.sendMessage("§6  ██████╗ ███████╗██╗     ██╗          ");
         c.sendMessage("§6  ██╔══██╗██╔════╝██║     ██║          ");
@@ -122,7 +122,7 @@ public class ServerGuard extends JavaPlugin {
         c.sendMessage("§6  ╚═════╝ ╚══════╝╚══════╝╚══════╝     ");
         c.sendMessage("§r");
         c.sendMessage("§7  Version §f" + getDescription().getVersion() + "  §7│  Author §bBellzeb");
-        c.sendMessage("§7  Status  §aFree §7│ " + (proActive ? "§5Pro §aActive" : "§7Pro §5Coming Soon"));
+        c.sendMessage("§7  Status  §aFree §7│ §7Server Monitoring & Logging");
         c.sendMessage("§r");
     }
 }
