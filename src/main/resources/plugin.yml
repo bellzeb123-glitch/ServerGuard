@@ -5,6 +5,9 @@ api-version: '1.21'
 description: "Monitoring serwera - komendy, skrzynie, bloki, panel GUI."
 authors: [ServerGuard]
 
+softdepend:
+  - BellHub
+
 commands:
   sg:
     description: Panel administracyjny ServerGuard
