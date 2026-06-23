@@ -2,7 +2,7 @@ name: Build ServerGuard
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -11,11 +11,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout BellLands (bell-hub-api source)
+        uses: actions/checkout@v4
+        with:
+          repository: bellzeb123-glitch/BellLands
+          path: BellLands
+
       - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+
+      - name: Install bell-hub-api
+        run: mvn -B -f BellLands/bell-suite-api/pom.xml clean install
 
       - name: Kompiluj
         run: mvn clean package -q
@@ -24,5 +33,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ServerGuard
-          path: target/ServerGuardV2-2.1.0.jar
+          path: target/ServerGuardV2-*.jar
           retention-days: 30
