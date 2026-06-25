@@ -9,10 +9,10 @@ Kontynuuję rozwój pluginu ServerGuard w ekosystemie Bell (Minecraft Purpur/Pap
 
 ## Stan projektu
 - Ścieżka: F:\Projekty\ServerGuard
-- Wersja: 2.1.1 (plugin.yml), main: pl.serverguard.ServerGuard
+- Wersja: 1.26.1.2 (plugin.yml), main: pl.serverguard.ServerGuard
 - Live na serwerze produkcyjnym — monitoring bezpieczeństwa
 
-## Co już działa (v2.1.1)
+## Co już działa (v1.26.1.2)
 - Audyt komend admina (vanilla + Bell) — alert + blokada bez uprawnień
 - Logowanie komend, skrzyń, bloków, sesji
 - Faza 1: filtr TP, gamemode/kick log, konsola, cooldown alertów, retencja DB
@@ -61,7 +61,7 @@ cd F:\Projekty\ServerGuard
 .\build.ps1
 ```
 
-JAR: `target/ServerGuardV2-2.1.1.jar` → `plugins/`
+JAR: `target/ServerGuardV2-1.26.1.2.jar` → `plugins/`
 
 Wymaga JDK 21+ (`JAVA_HOME` lub auto-wykrycie w `build.ps1`). Maven wrapper: `mvnw.cmd`.
 

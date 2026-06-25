@@ -45,7 +45,7 @@ public class SGCommand implements CommandExecutor {
 
     private void sendHelp(CommandSender sender) {
         sender.sendMessage("§6╔══════════════════════════════╗");
-        sender.sendMessage("§6║   §eServerGuard §6v2.1.1         ║");
+        sender.sendMessage("§6║   §eServerGuard §6v" + plugin.getDescription().getVersion() + "         ║");
         sender.sendMessage("§6╠══════════════════════════════╣");
         sender.sendMessage("§6║ §a/sg §7lub §a/sg gui §6— panel GUI  ║");
         sender.sendMessage("§6║ §a/sg reload §6— przeładuj config ║");
