@@ -66,12 +66,12 @@ public class ServerGuard extends JavaPlugin {
         if (getServer().getPluginManager().getPlugin("BellHub") != null) {
             try {
                 getServer().getServicesManager().register(
-                        pl.bell.suite.api.BellModule.class,
-                        new pl.serverguard.integration.BellSuiteModule(this), this,
+                        pl.bell.hub.api.BellModule.class,
+                        new pl.serverguard.integration.BellHubModule(this), this,
                         org.bukkit.plugin.ServicePriority.Normal);
-                getLogger().info("Zarejestrowano modul logów w panelu BellSuite.");
+                getLogger().info("Zarejestrowano modul logów w panelu BellHub.");
             } catch (Throwable t) {
-                getLogger().warning("Nie udalo sie zarejestrowac modulu BellSuite: " + t.getMessage());
+                getLogger().warning("Nie udalo sie zarejestrowac modulu BellHub: " + t.getMessage());
             }
         }
 

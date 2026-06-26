@@ -14,8 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Clone BellLands (bell-hub-api source)
-        run: git clone --depth 1 https://github.com/bellzeb123-glitch/BellLands.git BellLands
 
       - uses: actions/setup-java@v5
         with:
@@ -23,8 +21,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+
       - name: Install bell-hub-api
-        run: mvn -B -f BellLands/bell-suite-api/pom.xml clean install
+        run: |
+          git clone --depth 1 https://github.com/bellzeb123-glitch/bell-hub-api.git /tmp/bell-hub-api
+          mvn -f /tmp/bell-hub-api/pom.xml install -DskipTests -B -q
 
       - name: Kompiluj
         run: mvn clean package -q

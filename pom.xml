@@ -17,6 +17,10 @@
 
     <repositories>
         <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+        <repository>
             <id>purpur</id>
             <url>https://repo.purpurmc.org/snapshots</url>
         </repository>
@@ -30,7 +34,7 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>pl.bell</groupId>
+            <groupId>com.github.bellzeb123-glitch</groupId>
             <artifactId>bell-hub-api</artifactId>
             <version>0.1.0</version>
             <scope>provided</scope>

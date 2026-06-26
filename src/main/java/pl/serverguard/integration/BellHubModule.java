@@ -1,6 +1,6 @@
 package pl.serverguard.integration;
 
-import pl.bell.suite.api.*;
+import pl.bell.hub.api.*;
 import pl.serverguard.ServerGuard;
 import pl.serverguard.managers.AdminAuditManager;
 import pl.serverguard.managers.DatabaseManager;
@@ -9,11 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class BellSuiteModule implements BellModule {
+public class BellHubModule implements BellModule {
 
     private final ServerGuard plugin;
 
-    public BellSuiteModule(ServerGuard plugin) {
+    public BellHubModule(ServerGuard plugin) {
         this.plugin = plugin;
     }
 
@@ -50,7 +50,7 @@ public class BellSuiteModule implements BellModule {
     }
 
     @Override
-    public ActionResult invoke(SuiteAction action, Actor actor) {
+    public ActionResult invoke(HubAction action, Actor actor) {
         switch (action.name()) {
             case "audit.toggle" -> {
                 boolean val = "true".equals(action.param("enabled"));
