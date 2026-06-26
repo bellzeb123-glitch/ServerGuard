@@ -25,11 +25,13 @@ public class BellHubModule implements BellModule {
     public List<Stat> dashboard() {
         DatabaseManager db = plugin.getDb();
         int[] c = db.getPlayerCounts("%");
+        String lang = plugin.getConfig().getString("language", "pl");
         return List.of(
             Stat.of("Komendy", c[0], "cyan"),
             Stat.of("Kontenery", c[1], "violet"),
             Stat.of("Bloki", c[2], "gold"),
-            Stat.of("Sesje", c[3], "green")
+            Stat.of("Sesje", c[3], "green"),
+            new Stat("Język", lang.toUpperCase(), "silver")
         );
     }
 
