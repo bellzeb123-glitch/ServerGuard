@@ -16,14 +16,15 @@ public class SGCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        var lang = plugin.getLang();
         if (!sender.hasPermission("serverguard.admin")) {
-            sender.sendMessage("§cBrak uprawnień.");
+            sender.sendMessage(lang.tr("commands.no-permission"));
             return true;
         }
 
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             plugin.reloadAll();
-            sender.sendMessage("§a[ServerGuard] Konfiguracja przeładowana.");
+            sender.sendMessage(lang.tr("commands.reload-ok"));
             return true;
         }
 
@@ -44,13 +45,15 @@ public class SGCommand implements CommandExecutor {
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage("§6╔══════════════════════════════╗");
-        sender.sendMessage("§6║   §eServerGuard §6v" + plugin.getDescription().getVersion() + "         ║");
-        sender.sendMessage("§6╠══════════════════════════════╣");
-        sender.sendMessage("§6║ §a/sg §7lub §a/sg gui §6— panel GUI  ║");
-        sender.sendMessage("§6║ §a/sg reload §6— przeładuj config ║");
-        sender.sendMessage("§6║ §a/sghistory <nick> [typ] [n]  §6║");
-        sender.sendMessage("§6║ §a/sgsearch <fraza>            §6║");
-        sender.sendMessage("§6╚══════════════════════════════╝");
+        var lang = plugin.getLang();
+        String ver = plugin.getDescription().getVersion();
+        sender.sendMessage(lang.tr("commands.help-header-top"));
+        sender.sendMessage(lang.tr("commands.help-header-title", "version", ver));
+        sender.sendMessage(lang.tr("commands.help-header-mid"));
+        sender.sendMessage(lang.tr("commands.help-line-gui"));
+        sender.sendMessage(lang.tr("commands.help-line-reload"));
+        sender.sendMessage(lang.tr("commands.help-line-history"));
+        sender.sendMessage(lang.tr("commands.help-line-search"));
+        sender.sendMessage(lang.tr("commands.help-footer"));
     }
 }

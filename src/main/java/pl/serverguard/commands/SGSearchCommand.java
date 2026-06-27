@@ -17,36 +17,35 @@ public class SGSearchCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        var lang = plugin.getLang();
         if (!sender.hasPermission("serverguard.admin")) {
-            sender.sendMessage("§cBrak uprawnień.");
+            sender.sendMessage(lang.tr("commands.no-permission"));
             return true;
         }
         if (args.length < 1) {
-            sender.sendMessage("§eUżycie: /sgsearch <fraza>");
+            sender.sendMessage(lang.tr("commands.search-usage"));
             return true;
         }
 
         String query = String.join(" ", args);
-        sender.sendMessage("§6Szukam: §e" + query + "§6...");
+        sender.sendMessage(lang.tr("commands.search-loading", "query", query));
 
-        // Wykonaj asynchronicznie
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             List<String[]> results = plugin.getDb().searchAll(query, 50);
 
             plugin.getServer().getScheduler().runTask(plugin, () -> {
                 if (results.isEmpty()) {
-                    sender.sendMessage("§7Nie znaleziono wyników dla: §e" + query);
+                    sender.sendMessage(lang.tr("commands.search-empty", "query", query));
                     return;
                 }
 
-                sender.sendMessage("§6━━━ §eWyniki szukania §7'" + query + "' §6(" + results.size() + ") ━━━");
+                sender.sendMessage(lang.tr("commands.search-header", "query", query, "count", results.size()));
                 for (String[] r : results) {
-                    // r: timestamp, player, type, detail
                     String typeColor = getTypeColor(r[2]);
                     sender.sendMessage("§7" + r[0] + " §b" + r[1]
                             + " " + typeColor + "[" + r[2] + "] §f" + r[3]);
                 }
-                sender.sendMessage("§6━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                sender.sendMessage(lang.tr("commands.search-footer"));
             });
         });
 

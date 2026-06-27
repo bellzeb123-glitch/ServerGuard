@@ -74,4 +74,32 @@ public class LangManager {
         String m = message.trim().toLowerCase(Locale.ROOT);
         return m.equals("anuluj") || m.equals("cancel");
     }
+
+    /** Translates a DB-stored action code to the current language label. */
+    public String actionLabel(String dbAction) {
+        if (dbAction == null) return "";
+        if (dbAction.equals(raw("db.action-take"))) return tr("db.action-take-label");
+        if (dbAction.equals(raw("db.action-put"))) return tr("db.action-put-label");
+        if (dbAction.equals(raw("db.action-destroy"))) return tr("db.action-destroy-label");
+        return dbAction;
+    }
+
+    /** Resolves history query type from PL or EN aliases. Returns null if unknown. */
+    public String resolveHistoryType(String input) {
+        if (input == null) return raw("db.type-commands");
+        String t = input.toLowerCase(Locale.ROOT);
+        return switch (t) {
+            case "komendy", "commands", "command" -> raw("db.type-commands");
+            case "skrzynie", "containers", "container", "chests" -> raw("db.type-containers");
+            case "bloki", "blocks", "block" -> raw("db.type-blocks");
+            default -> null;
+        };
+    }
+
+    public String historyTypeLabel(String canonicalType) {
+        if (canonicalType.equals(raw("db.type-commands"))) return tr("gui.logs.types.commands");
+        if (canonicalType.equals(raw("db.type-containers"))) return tr("gui.logs.types.containers");
+        if (canonicalType.equals(raw("db.type-blocks"))) return tr("gui.logs.types.blocks");
+        return canonicalType;
+    }
 }
