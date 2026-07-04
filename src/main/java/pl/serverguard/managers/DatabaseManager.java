@@ -23,6 +23,7 @@ public class DatabaseManager {
     private PreparedStatement psContainer;
     private PreparedStatement psBlock;
     private PreparedStatement psSession;
+    private PreparedStatement psEntity;
 
     public DatabaseManager(ServerGuard plugin) {
         this.plugin = plugin;
@@ -112,7 +113,24 @@ public class DatabaseManager {
                 "action TEXT NOT NULL," +
                 "world TEXT NOT NULL," +
                 "x INTEGER, y INTEGER, z INTEGER," +
-                "btype TEXT NOT NULL" +
+                "btype TEXT NOT NULL," +
+                "claim_owner TEXT," +
+                "claim_dist INTEGER," +
+                "player_role TEXT" +
+                ")");
+
+            s.execute("CREATE TABLE IF NOT EXISTS sg_entities (" +
+                "id INTEGER PRIMARY KEY" + ai + "," +
+                "ts DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                "uuid TEXT NOT NULL," +
+                "name TEXT NOT NULL," +
+                "action TEXT NOT NULL," +
+                "world TEXT NOT NULL," +
+                "x INTEGER, y INTEGER, z INTEGER," +
+                "etype TEXT NOT NULL," +
+                "claim_owner TEXT," +
+                "claim_dist INTEGER," +
+                "player_role TEXT" +
                 ")");
 
             s.execute("CREATE TABLE IF NOT EXISTS sg_sessions (" +
@@ -135,8 +153,12 @@ public class DatabaseManager {
             s.execute("CREATE INDEX IF NOT EXISTS idx_blk_name  ON sg_blocks(name, ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_blk_pos   ON sg_blocks(world, x, y, z)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_blk_ts    ON sg_blocks(ts)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_ent_name  ON sg_entities(name, ts)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_ent_pos   ON sg_entities(world, x, y, z)");
+            s.execute("CREATE INDEX IF NOT EXISTS idx_ent_ts    ON sg_entities(ts)");
             s.execute("CREATE INDEX IF NOT EXISTS idx_ses_ts    ON sg_sessions(ts)");
         }
+        migrateColumns();
         plugin.getLogger().info("Tabele bazy danych gotowe.");
         // Dopiero teraz wlaczamy tryb manualnych transakcji dla szybkiego zapisu
         connection.setAutoCommit(false);
@@ -148,9 +170,40 @@ public class DatabaseManager {
         psContainer = connection.prepareStatement(
             "INSERT INTO sg_containers (uuid,name,action,world,x,y,z,ctype,item,amount) VALUES (?,?,?,?,?,?,?,?,?,?)");
         psBlock = connection.prepareStatement(
-            "INSERT INTO sg_blocks (uuid,name,action,world,x,y,z,btype) VALUES (?,?,?,?,?,?,?,?)");
+            "INSERT INTO sg_blocks (uuid,name,action,world,x,y,z,btype,claim_owner,claim_dist,player_role) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
         psSession = connection.prepareStatement(
             "INSERT INTO sg_sessions (uuid,name,action,ip,world,x,y,z) VALUES (?,?,?,?,?,?,?,?)");
+        psEntity = connection.prepareStatement(
+            "INSERT INTO sg_entities (uuid,name,action,world,x,y,z,etype,claim_owner,claim_dist,player_role) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+    }
+
+    private void migrateColumns() {
+        addColumnIfMissing("sg_blocks", "claim_owner", "TEXT");
+        addColumnIfMissing("sg_blocks", "claim_dist", "INTEGER");
+        addColumnIfMissing("sg_blocks", "player_role", "TEXT");
+    }
+
+    private void addColumnIfMissing(String table, String column, String sqlType) {
+        try (Statement s = connection.createStatement()) {
+            if (dbType.equals("mysql")) {
+                try {
+                    s.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + sqlType);
+                } catch (SQLException e) {
+                    if (!e.getMessage().toLowerCase().contains("duplicate")) {
+                        plugin.getLogger().warning("Migracja " + table + "." + column + ": " + e.getMessage());
+                    }
+                }
+            } else {
+                try (ResultSet rs = s.executeQuery("PRAGMA table_info(" + table + ")")) {
+                    while (rs.next()) {
+                        if (column.equalsIgnoreCase(rs.getString("name"))) return;
+                    }
+                }
+                s.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + sqlType);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Migracja " + table + "." + column + ": " + e.getMessage());
+        }
     }
 
     private void startWriterThread() {
@@ -216,7 +269,24 @@ public class DatabaseManager {
                         psBlock.setInt(6, (int) v[5]);
                         psBlock.setInt(7, (int) v[6]);
                         psBlock.setString(8, (String) v[7]);
+                        setNullableString(psBlock, 9, v.length > 8 ? v[8] : null);
+                        setNullableInt(psBlock, 10, v.length > 9 ? v[9] : null);
+                        setNullableString(psBlock, 11, v.length > 10 ? v[10] : null);
                         psBlock.addBatch();
+                    }
+                    case ENTITIES -> {
+                        psEntity.setString(1, (String) v[0]);
+                        psEntity.setString(2, (String) v[1]);
+                        psEntity.setString(3, (String) v[2]);
+                        psEntity.setString(4, (String) v[3]);
+                        psEntity.setInt(5, (int) v[4]);
+                        psEntity.setInt(6, (int) v[5]);
+                        psEntity.setInt(7, (int) v[6]);
+                        psEntity.setString(8, (String) v[7]);
+                        setNullableString(psEntity, 9, v.length > 8 ? v[8] : null);
+                        setNullableInt(psEntity, 10, v.length > 9 ? v[9] : null);
+                        setNullableString(psEntity, 11, v.length > 10 ? v[10] : null);
+                        psEntity.addBatch();
                     }
                     case SESSIONS -> {
                         psSession.setString(1, (String) v[0]);
@@ -234,6 +304,7 @@ public class DatabaseManager {
             psCommand.executeBatch();
             psContainer.executeBatch();
             psBlock.executeBatch();
+            psEntity.executeBatch();
             psSession.executeBatch();
             connection.commit();
         } catch (SQLException e) {
@@ -275,8 +346,15 @@ public class DatabaseManager {
 
     public List<String[]> getBlocks(String name, int limit) {
         return query(
-            "SELECT ts,name,action,world,x,y,z,btype " +
+            "SELECT ts,name,action,world,x,y,z,btype,claim_owner,claim_dist,player_role " +
             "FROM sg_blocks WHERE name LIKE ? ORDER BY ts DESC LIMIT ?",
+            name, limit);
+    }
+
+    public List<String[]> getEntities(String name, int limit) {
+        return query(
+            "SELECT ts,name,action,world,x,y,z,etype,claim_owner,claim_dist,player_role " +
+            "FROM sg_entities WHERE name LIKE ? ORDER BY ts DESC LIMIT ?",
             name, limit);
     }
 
@@ -301,7 +379,8 @@ public class DatabaseManager {
             count("SELECT COUNT(*) FROM sg_commands WHERE name LIKE ?", name),
             count("SELECT COUNT(*) FROM sg_containers WHERE name LIKE ?", name),
             count("SELECT COUNT(*) FROM sg_blocks WHERE name LIKE ?", name),
-            count("SELECT COUNT(*) FROM sg_sessions WHERE name LIKE ?", name)
+            count("SELECT COUNT(*) FROM sg_sessions WHERE name LIKE ?", name),
+            count("SELECT COUNT(*) FROM sg_entities WHERE name LIKE ?", name)
         };
     }
 
@@ -330,6 +409,10 @@ public class DatabaseManager {
         out.addAll(query(
             "SELECT ts,name,'BLOK_'||action, btype||' @ '||world||' '||x||','||y||','||z " +
             "FROM sg_blocks WHERE name LIKE ? OR btype LIKE ? ORDER BY ts DESC LIMIT ?",
+            p, p, limit));
+        out.addAll(query(
+            "SELECT ts,name,'ZWIERZE_'||action, etype||' @ '||world||' '||x||','||y||','||z " +
+            "FROM sg_entities WHERE name LIKE ? OR etype LIKE ? ORDER BY ts DESC LIMIT ?",
             p, p, limit));
         out.sort((a, b) -> b[0].compareTo(a[0]));
         return out.size() > limit ? out.subList(0, limit) : out;
@@ -397,7 +480,7 @@ public class DatabaseManager {
         int total = 0;
         try (Connection purgeConn = openWriteConnection()) {
             purgeConn.setAutoCommit(false);
-            for (String table : List.of("sg_commands", "sg_containers", "sg_blocks", "sg_sessions")) {
+            for (String table : List.of("sg_commands", "sg_containers", "sg_blocks", "sg_entities", "sg_sessions")) {
                 String sql = dbType.equals("mysql")
                     ? "DELETE FROM " + table + " WHERE ts < DATE_SUB(NOW(), INTERVAL ? DAY)"
                     : "DELETE FROM " + table + " WHERE ts < datetime('now', ?)";
@@ -432,5 +515,15 @@ public class DatabaseManager {
             File dbFile = new File(plugin.getDataFolder(), fileName);
             return DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
         }
+    }
+
+    private void setNullableString(PreparedStatement ps, int index, Object value) throws SQLException {
+        if (value == null) ps.setNull(index, Types.VARCHAR);
+        else ps.setString(index, value.toString());
+    }
+
+    private void setNullableInt(PreparedStatement ps, int index, Object value) throws SQLException {
+        if (value == null) ps.setNull(index, Types.INTEGER);
+        else ps.setInt(index, (Integer) value);
     }
 }

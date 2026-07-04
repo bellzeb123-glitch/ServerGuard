@@ -347,6 +347,37 @@ blocks:
     - ENCHANTING_TABLE
     - ANVIL
     - JUKEBOX
+  # Loguj WSZYSTKIE bloki w promieniu X od najbliższego claima (BellLands).
+  # Właściciel tego claima jest pomijany; trusted i obcy — zapisywani.
+  # Działa tylko gdy BellLands jest załadowany. Wilderness daleko od claimów = brak logu.
+  near-claim:
+    enabled: true
+    radius: 128
+    skip-owner: true
+
+# Encje: zwierzęta, ramki, stojaki (tylko gdy gracz jako sprawca)
+entities:
+  enabled: true
+  monitored-types:
+    - COW
+    - PIG
+    - SHEEP
+    - CHICKEN
+    - HORSE
+    - DONKEY
+    - MULE
+    - LLAMA
+    - RABBIT
+    - MOOSHROOM
+    - GOAT
+    - ARMOR_STAND
+    - ITEM_FRAME
+    - GLOW_ITEM_FRAME
+    - PAINTING
+  near-claim:
+    enabled: true
+    radius: 128
+    skip-owner: true
 
 # Alerty dla adminów
 alerts:

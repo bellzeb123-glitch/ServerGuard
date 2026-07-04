@@ -31,6 +31,7 @@ public class BellHubModule implements BellModule {
             Stat.of("Kontenery", c[1], "violet"),
             Stat.of("Bloki", c[2], "gold"),
             Stat.of("Sesje", c[3], "green"),
+            Stat.of("Encje", c[4], "rose"),
             new Stat("Język", lang.toUpperCase(), "silver")
         );
     }
@@ -103,7 +104,7 @@ public class BellHubModule implements BellModule {
         if (name.isEmpty()) return "{\"found\":false}";
         DatabaseManager db = plugin.getDb();
         int[] counts = db.getPlayerCounts(name);
-        if (counts[0] + counts[1] + counts[2] + counts[3] == 0)
+        if (counts[0] + counts[1] + counts[2] + counts[3] + counts[4] == 0)
             return "{\"found\":false}";
 
         StringBuilder sb = new StringBuilder(2048);
@@ -111,14 +112,17 @@ public class BellHubModule implements BellModule {
         sb.append(",\"counts\":{\"commands\":").append(counts[0])
           .append(",\"containers\":").append(counts[1])
           .append(",\"blocks\":").append(counts[2])
-          .append(",\"sessions\":").append(counts[3]).append("}");
+          .append(",\"sessions\":").append(counts[3])
+          .append(",\"entities\":").append(counts[4]).append("}");
 
         sb.append(",\"commands\":").append(rowsToJson(db.getCommands(name, 50),
             new String[]{"ts","name","world","x","y","z","cmd","alert"}));
         sb.append(",\"containers\":").append(rowsToJson(db.getContainers(name, 50),
             new String[]{"ts","name","action","world","x","y","z","ctype","item","amount"}));
         sb.append(",\"blocks\":").append(rowsToJson(db.getBlocks(name, 50),
-            new String[]{"ts","name","action","world","x","y","z","btype"}));
+            new String[]{"ts","name","action","world","x","y","z","btype","claim_dist","player_role"}));
+        sb.append(",\"entities\":").append(rowsToJson(db.getEntities(name, 50),
+            new String[]{"ts","name","action","world","x","y","z","etype","claim_dist","player_role"}));
         sb.append(",\"sessions\":").append(rowsToJson(db.getSessions(name, 50),
             new String[]{"ts","name","action","ip","world","x","y","z"}));
         sb.append("}");
@@ -173,7 +177,9 @@ public class BellHubModule implements BellModule {
         sb.append(",\"containers\":").append(rowsToJson(db.getContainers("%", cap),
                 new String[]{"ts","name","action","world","x","y","z","ctype","item","amount"}));
         sb.append(",\"blocks\":").append(rowsToJson(db.getBlocks("%", cap),
-                new String[]{"ts","name","action","world","x","y","z","btype"}));
+                new String[]{"ts","name","action","world","x","y","z","btype","claim_dist","player_role"}));
+        sb.append(",\"entities\":").append(rowsToJson(db.getEntities("%", cap),
+                new String[]{"ts","name","action","world","x","y","z","etype","claim_dist","player_role"}));
         sb.append(",\"sessions\":").append(rowsToJson(db.getSessions("%", cap),
                 new String[]{"ts","name","action","ip","world","x","y","z"}));
         sb.append("}");

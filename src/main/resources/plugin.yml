@@ -7,6 +7,7 @@ authors: [ServerGuard]
 
 softdepend:
   - BellHub
+  - BellLands
 
 commands:
   sg:
@@ -15,7 +16,7 @@ commands:
     permission: serverguard.admin
   sghistory:
     description: Historia gracza
-    usage: /sghistory <nick> [komendy|skrzynie|bloki] [ilosc]
+    usage: /sghistory <nick> [komendy|skrzynie|bloki|encje] [ilosc]
     permission: serverguard.admin
   sgsearch:
     description: Szukaj w logach

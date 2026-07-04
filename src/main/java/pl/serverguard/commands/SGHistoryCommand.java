@@ -50,6 +50,7 @@ public class SGHistoryCommand implements CommandExecutor {
         final String typeCommands = lang.raw("db.type-commands");
         final String typeContainers = lang.raw("db.type-containers");
         final String typeBlocks = lang.raw("db.type-blocks");
+        final String typeEntities = lang.raw("db.type-entities");
         final int queryLimit = limit;
         final String queryType = type;
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -60,6 +61,8 @@ public class SGHistoryCommand implements CommandExecutor {
                     plugin.getDb().getContainers(playerName, queryLimit);
                 case String t when t.equals(typeBlocks) ->
                     plugin.getDb().getBlocks(playerName, queryLimit);
+                case String t when t.equals(typeEntities) ->
+                    plugin.getDb().getEntities(playerName, queryLimit);
                 default -> List.of();
             };
 
@@ -69,6 +72,7 @@ public class SGHistoryCommand implements CommandExecutor {
                 } else {
                     if (queryType.equals(typeCommands)) formatCommands(sender, rows);
                     else if (queryType.equals(typeContainers)) formatContainers(sender, rows);
+                    else if (queryType.equals(typeEntities)) formatEntities(sender, rows);
                     else formatBlocks(sender, rows);
                 }
                 sender.sendMessage(lang.tr("commands.history-footer"));
@@ -106,8 +110,33 @@ public class SGHistoryCommand implements CommandExecutor {
         for (String[] r : rows) {
             String label = lang.actionLabel(r[2]);
             String color = destroy.equals(r[2]) ? "§c" : "§a";
+            String claim = formatClaimMeta(lang, r);
             sender.sendMessage("§7" + r[0] + " " + color + label + " §f" + r[7]
-                + " §8@ " + r[3] + " [" + r[4] + "," + r[5] + "," + r[6] + "]");
+                + " §8@ " + r[3] + " [" + r[4] + "," + r[5] + "," + r[6] + "]" + claim);
         }
+    }
+
+    private void formatEntities(CommandSender sender, List<String[]> rows) {
+        LangManager lang = plugin.getLang();
+        String destroy = lang.raw("db.action-destroy");
+        for (String[] r : rows) {
+            String label = lang.actionLabel(r[2]);
+            String color = destroy.equals(r[2]) ? "§c" : "§c";
+            String claim = formatClaimMeta(lang, r);
+            sender.sendMessage("§7" + r[0] + " " + color + label + " §f" + r[7]
+                + " §8@ " + r[3] + " [" + r[4] + "," + r[5] + "," + r[6] + "]" + claim);
+        }
+    }
+
+    private String formatClaimMeta(LangManager lang, String[] row) {
+        if (row.length < 11 || row[8] == null) return "";
+        String role = row[10];
+        String roleLabel = lang.raw("db.role-trusted").equals(role)
+            ? lang.tr("db.role-trusted")
+            : lang.raw("db.role-stranger").equals(role)
+                ? lang.tr("db.role-stranger")
+                : role;
+        String dist = row[9] != null ? row[9] + "m" : "?";
+        return " §7(claim " + dist + ", " + roleLabel + ")";
     }
 }

@@ -7,6 +7,7 @@ import pl.serverguard.commands.SGHistoryCommand;
 import pl.serverguard.commands.SGSearchCommand;
 import pl.serverguard.config.LangManager;
 import pl.serverguard.gui.AdminGuiService;
+import pl.serverguard.integration.BellLandsHook;
 import pl.serverguard.listeners.*;
 import pl.serverguard.managers.AdminAuditManager;
 import pl.serverguard.managers.AlertManager;
@@ -25,6 +26,7 @@ public class ServerGuard extends JavaPlugin {
     private LangManager lang;
     private AdminGuiService adminGui;
     private PlayerListener playerListener;
+    private BellLandsHook bellLandsHook;
     private BukkitTask retentionTask;
 
     @Override
@@ -47,9 +49,12 @@ public class ServerGuard extends JavaPlugin {
         configLists = new ConfigListManager(this);
         adminGui = new AdminGuiService(this);
 
+        bellLandsHook = new BellLandsHook(this);
+
         getServer().getPluginManager().registerEvents(new CommandListener(this), this);
         getServer().getPluginManager().registerEvents(new ContainerListener(this), this);
-        getServer().getPluginManager().registerEvents(new BlockListener(this), this);
+        getServer().getPluginManager().registerEvents(new BlockListener(this, bellLandsHook), this);
+        getServer().getPluginManager().registerEvents(new EntityListener(this, bellLandsHook), this);
         playerListener = new PlayerListener(this);
         getServer().getPluginManager().registerEvents(playerListener, this);
         getServer().getPluginManager().registerEvents(new ModerationListener(this), this);

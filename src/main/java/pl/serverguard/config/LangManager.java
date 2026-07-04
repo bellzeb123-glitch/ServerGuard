@@ -81,6 +81,8 @@ public class LangManager {
         if (dbAction.equals(raw("db.action-take"))) return tr("db.action-take-label");
         if (dbAction.equals(raw("db.action-put"))) return tr("db.action-put-label");
         if (dbAction.equals(raw("db.action-destroy"))) return tr("db.action-destroy-label");
+        if (dbAction.equals(raw("db.action-place"))) return tr("db.action-place-label");
+        if (dbAction.equals(raw("db.action-kill"))) return tr("db.action-kill-label");
         return dbAction;
     }
 
@@ -92,6 +94,7 @@ public class LangManager {
             case "komendy", "commands", "command" -> raw("db.type-commands");
             case "skrzynie", "containers", "container", "chests" -> raw("db.type-containers");
             case "bloki", "blocks", "block" -> raw("db.type-blocks");
+            case "zwierzeta", "zwierzęta", "encje", "entities", "entity", "animals" -> raw("db.type-entities");
             default -> null;
         };
     }
@@ -100,6 +103,7 @@ public class LangManager {
         if (canonicalType.equals(raw("db.type-commands"))) return tr("gui.logs.types.commands");
         if (canonicalType.equals(raw("db.type-containers"))) return tr("gui.logs.types.containers");
         if (canonicalType.equals(raw("db.type-blocks"))) return tr("gui.logs.types.blocks");
+        if (canonicalType.equals(raw("db.type-entities"))) return tr("gui.logs.types.entities");
         return canonicalType;
     }
 }
