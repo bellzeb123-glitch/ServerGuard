@@ -1,7 +1,7 @@
-name: ServerGuard
-version: 1.26.1.2
+﻿name: ServerGuard
+version: 1.26.2.0
 main: pl.serverguard.ServerGuard
-api-version: '1.21'
+api-version: '26.2'
 description: "Monitoring serwera - komendy, skrzynie, bloki, panel GUI."
 authors: [ServerGuard]
 

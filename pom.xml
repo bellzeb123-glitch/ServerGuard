@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -6,13 +6,15 @@
 
     <groupId>pl.serverguard</groupId>
     <artifactId>ServerGuardV2</artifactId>
-    <version>1.26.1.2</version>
+    <version>1.26.2.0</version>
     <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <paper.version>26.2.build.60-beta</paper.version>
+        <purpur.version>26.2.build.2608-stable</purpur.version>
     </properties>
 
     <repositories>
@@ -30,7 +32,7 @@
         <dependency>
             <groupId>org.purpurmc.purpur</groupId>
             <artifactId>purpur-api</artifactId>
-            <version>1.21.4-R0.1-SNAPSHOT</version>
+            <version>${purpur.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
