@@ -14,6 +14,8 @@ public class LangManager {
 
     private final ServerGuard plugin;
     private FileConfiguration lang;
+    private FileConfiguration jarDefaults;
+    private File langFile;
     private String code = "pl";
 
     public LangManager(ServerGuard plugin) {
@@ -21,23 +23,54 @@ public class LangManager {
     }
 
     public void load() {
-        code = plugin.getConfig().getString("language", "pl").toLowerCase(Locale.ROOT);
-        if (!code.equals("pl") && !code.equals("en")) code = "pl";
+        try {
+            code = plugin.getConfig().getString("language", "pl").toLowerCase(Locale.ROOT);
+            if (!code.equals("pl") && !code.equals("en")) code = "pl";
 
-        File folder = new File(plugin.getDataFolder(), "lang");
-        folder.mkdirs();
-        File file = new File(folder, code + ".yml");
-        if (!file.exists()) {
-            plugin.saveResource("lang/" + code + ".yml", false);
-        }
+            File folder = new File(plugin.getDataFolder(), "lang");
+            folder.mkdirs();
+            langFile = new File(folder, code + ".yml");
+            if (!langFile.exists()) {
+                plugin.saveResource("lang/" + code + ".yml", false);
+            }
 
-        lang = YamlConfiguration.loadConfiguration(file);
-        InputStream stream = plugin.getResource("lang/" + code + ".yml");
-        if (stream != null) {
-            lang.setDefaults(YamlConfiguration.loadConfiguration(
-                new InputStreamReader(stream, StandardCharsets.UTF_8)));
-            lang.options().copyDefaults(true);
+            try (InputStreamReader reader = new InputStreamReader(
+                    new java.io.FileInputStream(langFile), StandardCharsets.UTF_8)) {
+                lang = YamlConfiguration.loadConfiguration(reader);
+            }
+
+            jarDefaults = null;
+            InputStream stream = plugin.getResource("lang/" + code + ".yml");
+            if (stream != null) {
+                try (InputStreamReader defReader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                    jarDefaults = YamlConfiguration.loadConfiguration(defReader);
+                }
+                lang.setDefaults(jarDefaults);
+                lang.options().copyDefaults(true);
+                // Stary plik na dysku nie dostaje nowych kluczy sam z siebie — dopisz i zapisz.
+                if (mergeMissingKeys(lang, jarDefaults)) {
+                    lang.save(langFile);
+                    plugin.getLogger().info("Language file updated with missing keys: lang/" + code + ".yml");
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to load language: " + e.getMessage());
+            if (lang == null) lang = new YamlConfiguration();
         }
+    }
+
+    /** Kopiuje brakujące ścieżki z JAR do runtime-config. Zwraca true jeśli coś dopisano. */
+    private static boolean mergeMissingKeys(FileConfiguration target, FileConfiguration defaults) {
+        if (defaults == null) return false;
+        boolean changed = false;
+        for (String key : defaults.getKeys(true)) {
+            if (defaults.isConfigurationSection(key)) continue;
+            if (!target.isSet(key)) {
+                target.set(key, defaults.get(key));
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     public String code() {
@@ -55,7 +88,13 @@ public class LangManager {
     }
 
     public String raw(String key) {
-        return lang.getString(key, key);
+        String value = lang.getString(key);
+        if (value != null && !value.isEmpty()) return value;
+        if (jarDefaults != null) {
+            String fromJar = jarDefaults.getString(key);
+            if (fromJar != null && !fromJar.isEmpty()) return fromJar;
+        }
+        return key;
     }
 
     public String tr(String key, Object... pairs) {

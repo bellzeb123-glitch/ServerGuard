@@ -46,6 +46,13 @@ teleports:
 # Logi moderacji (gamemode, kick, konsola)
 moderation:
   log-gamemode: true
+  # Vanilla Paper IGNORUJE minecraft.command.gamemode.creative=false.
+  # Włącz egzekucję: wejście w CREATIVE wymaga osobnej permisji z restricted-gamemodes.
+  enforce-gamemode-perms: true
+  gamemode-deny-message: "&c[ServerGuard] &eNie masz uprawnien do trybu &f{mode}&e."
+  # Tryb → wymagana permisja. Brak wpisu = brak dodatkowej blokady (wystarczy /gamemode).
+  restricted-gamemodes:
+    CREATIVE: minecraft.command.gamemode.creative
   log-kicks: true
   log-console-commands: true
   console-alert-prefixes:

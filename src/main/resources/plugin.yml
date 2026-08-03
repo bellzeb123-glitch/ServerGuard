@@ -12,8 +12,7 @@ softdepend:
 commands:
   sg:
     description: Panel administracyjny ServerGuard
-    usage: /sg [gui|reload|help]
-    permission: serverguard.admin
+    usage: /sg [gui|reload|help|invsee]
   sghistory:
     description: Historia gracza
     usage: /sghistory <nick> [komendy|skrzynie|bloki|encje] [ilosc]
@@ -27,6 +26,14 @@ permissions:
   serverguard.admin:
     description: Dostep do komend ServerGuard
     default: op
+    children:
+      serverguard.invsee: true
+  serverguard.invsee:
+    description: Podglad ekwipunku gracza na zywo (/sg invsee)
+    default: op
+  serverguard.invsee.edit:
+    description: Edycja ekwipunku / enderchest przez invsee
+    default: op
   serverguard.notify:
     description: Otrzymuje alerty o probach uzycia komend admina
     default: op
@@ -36,3 +43,6 @@ permissions:
   serverguard.audit.bypass:
     description: Pomija audyt i blokade komend admina
     default: false
+  serverguard.gamemode.bypass:
+    description: Pomija ograniczenia trybow (np. blokade creative)
+    default: op

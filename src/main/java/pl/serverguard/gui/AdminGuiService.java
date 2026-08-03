@@ -135,6 +135,18 @@ public class AdminGuiService {
             watched ? L("gui.player.watch-on") : L("gui.player.watch-off"),
             watched ? L("gui.player.watch-remove") : L("gui.player.watch-add")));
 
+        if (online) {
+            inv.setItem(37, item(Material.CHEST, L("gui.player.invsee"),
+                L("gui.player.invsee-lore"), "", L("gui.nav.click")));
+            inv.setItem(39, item(Material.ENDER_CHEST, L("gui.player.ender"),
+                L("gui.player.ender-lore"), "", L("gui.nav.click")));
+        } else {
+            inv.setItem(37, item(Material.CHEST, L("gui.player.invsee"),
+                L("gui.player.invsee-offline"), "", L("gui.nav.click")));
+            inv.setItem(39, item(Material.ENDER_CHEST, L("gui.player.ender"),
+                L("gui.player.invsee-offline"), "", L("gui.nav.click")));
+        }
+
         inv.setItem(48, backItem(L("gui.nav.back-players")));
         inv.setItem(49, backItem(L("gui.nav.back-main")));
 
@@ -326,8 +338,11 @@ public class AdminGuiService {
             case 40 -> prompt(admin, PendingType.FIND_PLAYER, GuiState.main(),
                 L("chat.search-phrase"), L("chat.cancel-hint"));
             case 44 -> {
-                plugin.reloadAll();
-                admin.sendMessage(L("chat.reload-ok"));
+                if (plugin.reloadAll()) {
+                    admin.sendMessage(L("chat.reload-ok"));
+                } else {
+                    admin.sendMessage("§cServerGuard reload failed — see console.");
+                }
                 openMain(admin);
             }
         }
@@ -371,6 +386,20 @@ public class AdminGuiService {
         if (slot == 40) {
             plugin.getWatchManager().toggle(state.targetPlayer());
             openPlayer(admin, state.targetPlayer());
+            return;
+        }
+        if (slot == 37 || slot == 39) {
+            if (!admin.hasPermission("serverguard.invsee") && !admin.hasPermission("serverguard.admin")) {
+                admin.sendMessage(plugin.getLang().tr("commands.invsee-no-perm"));
+                return;
+            }
+            Player target = Bukkit.getPlayerExact(state.targetPlayer());
+            if (target == null || !target.isOnline()) {
+                admin.sendMessage(plugin.getLang().tr("commands.invsee-offline", "player", state.targetPlayer()));
+                return;
+            }
+            if (slot == 37) plugin.getInvsee().openInventory(admin, target);
+            else plugin.getInvsee().openEnder(admin, target);
             return;
         }
         GuiState.LogType type = switch (slot) {

@@ -43,15 +43,20 @@ public class AdminAuditManager {
             "&c[ServerGuard] &eTa komenda jest zablokowana.");
 
         List<AuditRule> loaded = new ArrayList<>();
-        for (var entry : cfg.getMapList("admin-audit.rules")) {
-            String pattern = str(entry.get("pattern"));
-            String permission = str(entry.get("permission"));
-            if (pattern.isEmpty() || permission.isEmpty()) continue;
+        try {
+            for (var entry : cfg.getMapList("admin-audit.rules")) {
+                if (entry == null) continue;
+                String pattern = str(entry.get("pattern"));
+                String permission = str(entry.get("permission"));
+                if (pattern.isEmpty() || permission.isEmpty()) continue;
 
-            boolean block = entry.containsKey("block")
-                ? Boolean.TRUE.equals(entry.get("block"))
-                : defaultBlock;
-            loaded.add(new AuditRule(pattern.toLowerCase(), permission, block));
+                boolean block = entry.containsKey("block")
+                    ? Boolean.TRUE.equals(entry.get("block"))
+                    : defaultBlock;
+                loaded.add(new AuditRule(pattern.toLowerCase(), permission, block));
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("admin-audit.rules invalid — keeping empty rules: " + e.getMessage());
         }
 
         loaded.sort(Comparator.comparingInt((AuditRule r) -> r.pattern().length()).reversed());
